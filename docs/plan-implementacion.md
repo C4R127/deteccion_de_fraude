@@ -418,9 +418,9 @@ AUDITOR (§10).
 **Rutas:** `/dashboard`, `/casos`, `/casos/:id`, `/reglas`, `/listas-bloqueo`,
 `/metricas`. AUDITOR no ve acciones de edición.
 
-- [ ] Pruebas: el menú muestra Reglas solo a ADMIN y SUPERVISOR.
-- [ ] Implementar y verificar: `npm test` y `npm run build`.
-- [ ] Commit `feat(frontend): base con login y navegacion por rol`.
+- [x] Pruebas: el menú muestra Reglas solo a ADMIN y SUPERVISOR.
+- [x] Implementar y verificar: `npm test` y `npm run build`.
+- [x] Commit `feat(frontend): base con login y navegacion por rol`.
 
 ### Tarea 5.4: Bandeja y detalle de caso
 
