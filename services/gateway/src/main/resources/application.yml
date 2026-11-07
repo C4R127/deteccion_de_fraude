@@ -47,7 +47,7 @@ spring:
             - id: transacciones
               uri: ${rutas.transacciones}
               predicates:
-                - Path=/api/v1/transacciones/**,/api/v1/clientes/*/transacciones
+                - Path=/api/v1/transacciones/**,/api/v1/clientes/*,/api/v1/clientes/*/transacciones
             - id: scoring
               uri: ${rutas.scoring}
               predicates:

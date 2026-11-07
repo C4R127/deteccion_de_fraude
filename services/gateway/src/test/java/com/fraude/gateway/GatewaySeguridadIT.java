@@ -160,6 +160,15 @@ class GatewaySeguridadIT {
     }
 
     @Test
+    void datos_del_cliente_van_a_transacciones() {
+        transacciones.stubFor(WireMock.get("/api/v1/clientes/c1").willReturn(aResponse()
+                .withStatus(200).withHeader("Content-Type", "application/json").withBody("{\"nombre\": \"J*** P***\"}")));
+
+        cliente.get().uri("/api/v1/clientes/c1").headers(h -> h.setBearerAuth(ANALISTA))
+                .exchange().expectStatus().isOk().expectBody().jsonPath("$.nombre").isEqualTo("J*** P***");
+    }
+
+    @Test
     void health_es_publico() {
         cliente.get().uri("/actuator/health").exchange().expectStatus().isOk();
     }

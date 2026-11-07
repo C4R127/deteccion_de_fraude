@@ -25,6 +25,8 @@ public class SeguridadConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
+                        // Handshake del WebSocket: el token se valida en el CONNECT de STOMP (AutenticacionStomp).
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/casos", "/api/v1/casos/**").hasAnyRole(LECTURA)
                         .requestMatchers(HttpMethod.POST, "/api/v1/casos/*/asignar").hasAnyRole("ADMIN", "SUPERVISOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/casos/*/tomar", "/api/v1/casos/*/investigar",

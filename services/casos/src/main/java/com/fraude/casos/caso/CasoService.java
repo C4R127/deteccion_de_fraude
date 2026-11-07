@@ -1,6 +1,7 @@
 package com.fraude.casos.caso;
 
 import com.fraude.casos.caso.CasoStore.Nota;
+import com.fraude.casos.vivo.NotificadorCasos;
 import com.fraude.common.errores.RecursoNoEncontradoException;
 import com.fraude.common.eventos.DecisionSospechosaEvento;
 import com.fraude.common.eventos.Resolucion;
@@ -24,10 +25,12 @@ public class CasoService {
 
     private final CasoStore store;
     private final PublicadorCasos publicador;
+    private final NotificadorCasos notificador;
 
-    public CasoService(CasoStore store, PublicadorCasos publicador) {
+    public CasoService(CasoStore store, PublicadorCasos publicador, NotificadorCasos notificador) {
         this.store = store;
         this.publicador = publicador;
+        this.notificador = notificador;
     }
 
     /** Crea el caso de una decisión sospechosa; si ya existía para esa transacción, no hace nada. */
@@ -36,7 +39,9 @@ public class CasoService {
         Instant ahora = Instant.now();
         Optional<UUID> id = store.insertar(evento, ahora);
         id.ifPresent(casoId -> store.registrarHistorial(casoId, null, EstadoCaso.NUEVO, USUARIO_SISTEMA, ahora, null));
-        return id.flatMap(store::buscar);
+        Optional<Caso> creado = id.flatMap(store::buscar);
+        creado.ifPresent(notificador::casoNuevo);
+        return creado;
     }
 
     @Transactional

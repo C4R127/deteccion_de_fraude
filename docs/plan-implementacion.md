@@ -401,10 +401,11 @@ AUDITOR (§10).
   del token en el CONNECT; ruta WebSocket en el gateway
 - Prueba: `CasosWebSocketIT`
 
-- [ ] Pruebas: un cliente STOMP autenticado recibe el caso nuevo; sin token se rechaza
+- [x] Pruebas: un cliente STOMP autenticado recibe el caso nuevo; sin token se rechaza
       la conexión.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(casos): casos nuevos por websocket`.
+- [x] Implementar y verificar. (También se rechazan token inválido, roles sin lectura de
+      casos y suscripciones a otros destinos.)
+- [x] Commit `feat(casos): casos nuevos por websocket`.
 
 ### Tarea 5.3: Base del frontend
 

@@ -258,7 +258,9 @@ inserta una fila en `historial_caso` en la misma transacción de base de datos.
 
 - Orden: prioridad (ALTA primero), luego `creado_en` ascendente.
 - Filtros: estado, prioridad, analista, rango de fechas.
-- Casos nuevos llegan en vivo por STOMP en `/topic/casos`.
+- Casos nuevos llegan en vivo por STOMP en `/topic/casos` (endpoint `/ws`). El token va en
+  la cabecera `Authorization: Bearer ...` del frame CONNECT y debe tener un rol de lectura;
+  sin token, con token inválido o al suscribirse a otro destino, el servidor cierra la sesión.
 - Detalle: reglas disparadas con detalle, últimas 20 transacciones del cliente
   (`GET /api/v1/clientes/{id}/transacciones`), mapa con sus ubicaciones, perfil del
   cliente, notas e historial.
