@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fraude.common.eventos.Topicos;
 import com.fraude.transacciones.TestcontainersConfig;
 import com.fraude.transacciones.TokensDePrueba;
-import com.fraude.transacciones.outbox.OutboxStore;
+import com.fraude.common.outbox.OutboxStore;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.time.Duration;

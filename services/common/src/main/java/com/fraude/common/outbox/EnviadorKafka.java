@@ -1,4 +1,4 @@
-package com.fraude.transacciones.outbox;
+package com.fraude.common.outbox;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;

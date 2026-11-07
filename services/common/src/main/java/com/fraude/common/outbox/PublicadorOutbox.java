@@ -1,4 +1,4 @@
-package com.fraude.transacciones.outbox;
+package com.fraude.common.outbox;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;

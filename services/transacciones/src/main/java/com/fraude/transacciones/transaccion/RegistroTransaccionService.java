@@ -13,7 +13,7 @@ import com.fraude.transacciones.maestros.ComercioRepository;
 import com.fraude.transacciones.maestros.EstadoTarjeta;
 import com.fraude.transacciones.maestros.Tarjeta;
 import com.fraude.transacciones.maestros.TarjetaRepository;
-import com.fraude.transacciones.outbox.OutboxStore;
+import com.fraude.common.outbox.OutboxStore;
 import com.fraude.transacciones.scoring.ScoringClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

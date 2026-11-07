@@ -1,4 +1,4 @@
-package com.fraude.transacciones.outbox;
+package com.fraude.common.outbox;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;

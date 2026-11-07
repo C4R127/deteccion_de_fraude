@@ -2,6 +2,9 @@ package com.fraude.transacciones.outbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fraude.common.outbox.EnviadorEventos;
+import com.fraude.common.outbox.OutboxStore;
+import com.fraude.common.outbox.PublicadorOutbox;
 import com.fraude.transacciones.TestcontainersConfig;
 import com.fraude.transacciones.TokensDePrueba;
 import io.micrometer.core.instrument.MeterRegistry;
