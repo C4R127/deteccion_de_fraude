@@ -5,6 +5,7 @@ import com.fraude.common.evaluacion.EvaluacionResultado;
 import com.fraude.common.evaluacion.EvaluacionSolicitud;
 import com.fraude.common.eventos.Canal;
 import com.fraude.common.eventos.Decision;
+import com.fraude.common.eventos.TransaccionCreadaEvento;
 import com.fraude.transacciones.maestros.Comercio;
 import com.fraude.transacciones.maestros.ComercioRepository;
 import com.fraude.transacciones.maestros.EstadoTarjeta;
@@ -13,6 +14,7 @@ import com.fraude.transacciones.maestros.TarjetaRepository;
 import com.fraude.transacciones.scoring.ScoringClient;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -29,14 +31,17 @@ public class RegistroTransaccionService {
     private final TransaccionStore store;
     private final ScoringClient scoring;
     private final TransactionTemplate tx;
+    private final ApplicationEventPublisher eventos;
 
     public RegistroTransaccionService(TarjetaRepository tarjetas, ComercioRepository comercios,
-            TransaccionStore store, ScoringClient scoring, TransactionTemplate tx) {
+            TransaccionStore store, ScoringClient scoring, TransactionTemplate tx,
+            ApplicationEventPublisher eventos) {
         this.tarjetas = tarjetas;
         this.comercios = comercios;
         this.store = store;
         this.scoring = scoring;
         this.tx = tx;
+        this.eventos = eventos;
     }
 
     /** Resultado del registro; {@code nueva = false} si el idExterno ya existía. */
@@ -65,8 +70,17 @@ public class RegistroTransaccionService {
             }
             TransaccionResponse respuesta = decidir(pendiente, tarjeta);
             store.registrarDecision(pendiente.id(), respuesta.decision(), respuesta.score(), respuesta.respaldo());
+            // Se publica en Kafka solo si esta transacción de base de datos hace commit (§3 paso 7).
+            eventos.publishEvent(evento(pendiente, respuesta));
             return new Registro(respuesta, true);
         });
+    }
+
+    private static TransaccionCreadaEvento evento(TransaccionPendiente t, TransaccionResponse r) {
+        return new TransaccionCreadaEvento(TransaccionCreadaEvento.VERSION_ACTUAL, t.id(), t.idExterno(),
+                t.tarjetaId(), t.clienteId(), t.comercioId(), t.mcc(), t.dispositivoHuella(), t.monto(),
+                t.moneda(), t.canal(), t.pais(), t.latitud(), t.longitud(), t.fecha(), r.decision(), r.score(),
+                r.respaldo());
     }
 
     private TransaccionResponse decidir(TransaccionPendiente t, Tarjeta tarjeta) {

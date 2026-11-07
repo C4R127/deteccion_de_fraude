@@ -194,10 +194,10 @@ Resilience4j `TimeLimiter` (200 ms configurable) y respaldo
 después del commit de base de datos (`@TransactionalEventListener(AFTER_COMMIT)`).
 Una transacción repetida por idempotencia no se publica de nuevo.
 
-- [ ] Pruebas: un evento por transacción nueva; ninguno en la repetida; la clave es el
+- [x] Pruebas: un evento por transacción nueva; ninguno en la repetida; la clave es el
       `tarjetaId`; si la base de datos hace rollback, no se publica.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(transacciones): publicar transacciones creadas en kafka`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(transacciones): publicar transacciones creadas en kafka`.
 
 ### Tarea 2.4: Gateway, seguridad y envío desde el generador
 
