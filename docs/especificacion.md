@@ -342,6 +342,8 @@ Validaciones (HTTP 422 si fallan): `monto > 0` con máximo 2 decimales; `moneda 
 `canal` en POS, ECOMMERCE, ATM; coordenadas obligatorias para POS y ATM, nulas para
 ECOMMERCE; `tarjetaToken` y `comercioId` existentes (HTTP 404 si no); tarjeta BLOQUEADA
 → se registra y se rechaza sin llamar al scoring.
+Se guarda con `decision = RECHAZAR`, `score = null`, `respaldo = false` y se publica el
+evento (ADR 0007). El cuerpo de `POST /internal/v1/evaluaciones` está en ADR 0006.
 
 Respuesta 201 (o 200 si es repetida):
 `{"transaccionId": "...", "decision": "REVISAR", "score": 55, "respaldo": false}`
