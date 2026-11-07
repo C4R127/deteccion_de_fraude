@@ -20,9 +20,16 @@ spring:
       properties:
         # Tópico nuevo o reinicio sin offsets: procesar desde el principio (historia).
         auto.offset.reset: earliest
+        # Reglas de Kafka de CLAUDE.md: offsets y estado en una sola transacción.
+        processing.guarantee: exactly_once_v2
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # metrics expone el lag del consumidor (kafka.consumer.fetch.manager.records.lag*).
+        include: health,info,metrics

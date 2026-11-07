@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TestInputTopic;
@@ -42,6 +44,7 @@ class TopologiaPerfilesTest {
     private final List<TransaccionCreadaEvento> eventos = new ArrayList<>();
     private TopologyTestDriver driver;
     private TestInputTopic<String, String> entrada;
+    private TestOutputTopic<String, String> dlt;
 
     /** Guarda el último perfil escrito por cliente, como lo haría Valkey. */
     static class EscritorFalso implements EscritorPerfil {
@@ -67,6 +70,8 @@ class TopologiaPerfilesTest {
         driver = new TopologyTestDriver(builder.build(), props, Instant.now());
         entrada = driver.createInputTopic(Topicos.TRANSACCIONES_CREADAS, new StringSerializer(),
                 new StringSerializer());
+        dlt = driver.createOutputTopic(Topicos.TRANSACCIONES_CREADAS + ".dlt", new StringDeserializer(),
+                new StringDeserializer());
     }
 
     @AfterEach
@@ -199,5 +204,28 @@ class TopologiaPerfilesTest {
         assertThat(eventos).extracting(TransaccionCreadaEvento::decision)
                 .containsExactly(Decision.APROBAR, Decision.RECHAZAR);
         assertThat(eventos).allSatisfy(e -> assertThat(e.tarjetaId()).isEqualTo(TARJETA));
+    }
+
+    @Test
+    void un_evento_sin_campos_obligatorios_va_a_la_dlt_con_el_motivo_y_no_detiene_el_flujo() throws Exception {
+        String sinCliente = mapper.writeValueAsString(new TransaccionCreadaEvento(1, UUID.randomUUID(),
+                UUID.randomUUID(), TARJETA, null, "COM-00001", "5411", null, new BigDecimal("10.00"), "PEN",
+                Canal.POS, "PE", null, null, BASE, Decision.APROBAR, 0, false));
+
+        entrada.pipeInput(TARJETA.toString(), sinCliente);
+        enviar("100.00", BASE);
+
+        var registros = dlt.readRecordsToList();
+        assertThat(registros).hasSize(1);
+        assertThat(registros.get(0).key()).isEqualTo(TARJETA.toString());
+        assertThat(new String(registros.get(0).headers().lastHeader("x-error").value()))
+                .contains("clienteId");
+        assertThat(eventos).hasSize(1).as("el inválido no llega a los escritores");
+        assertThat(perfil().n30d()).isEqualTo(1);
+    }
+
+    @Test
+    void la_dlt_de_un_topico_es_el_topico_con_sufijo_dlt() {
+        assertThat(TopologiaPerfiles.dlt(Topicos.TRANSACCIONES_CREADAS)).isEqualTo("transacciones.creadas.dlt");
     }
 }
