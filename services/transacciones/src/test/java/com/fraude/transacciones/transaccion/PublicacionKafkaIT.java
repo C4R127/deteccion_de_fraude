@@ -3,16 +3,12 @@ package com.fraude.transacciones.transaccion;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.Mockito.doThrow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fraude.common.eventos.Topicos;
 import com.fraude.transacciones.TestcontainersConfig;
 import com.fraude.transacciones.TokensDePrueba;
-import com.fraude.common.outbox.OutboxStore;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.time.Duration;
@@ -40,7 +36,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.kafka.KafkaContainer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -82,9 +77,6 @@ class PublicacionKafkaIT {
 
     @Autowired
     KafkaContainer kafka;
-
-    @MockitoSpyBean
-    OutboxStore outbox;
 
     @BeforeEach
     void preparar() {
@@ -189,10 +181,15 @@ class PublicacionKafkaIT {
     @Test
     void si_falla_el_guardado_del_outbox_no_queda_ni_la_transaccion_ni_el_evento() throws Exception {
         String idExterno = UUID.randomUUID().toString();
-        doThrow(new IllegalStateException("fallo simulado al guardar el outbox"))
-                .when(outbox).guardar(any(), any(), contains(idExterno));
-
-        var respuesta = enviar(idExterno, "tok_8c1f42a9");
+        // Fallo real de la base de datos al insertar en el outbox (sin mocks: el publicador
+        // programado usa OutboxStore en otro hilo).
+        jdbc.execute("ALTER TABLE outbox ADD CONSTRAINT prueba_rechaza CHECK (payload NOT LIKE '%" + idExterno + "%')");
+        ResponseEntity<String> respuesta;
+        try {
+            respuesta = enviar(idExterno, "tok_8c1f42a9");
+        } finally {
+            jdbc.execute("ALTER TABLE outbox DROP CONSTRAINT prueba_rechaza");
+        }
 
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM transaccion", Integer.class)).isZero();

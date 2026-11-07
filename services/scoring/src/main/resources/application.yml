@@ -15,11 +15,21 @@ spring:
     password: ${SCORING_DB_PASSWORD}
     hikari:
       schema: scoring
+      maximum-pool-size: 16
   data:
     redis:
       # Valkey (lo escribe perfiles; scoring solo lee).
       host: localhost
       port: 6379
+      lettuce:
+        # El pipeline de PerfilLector necesita una conexión dedicada: sin pool se abriría una
+        # por evaluación. min-idle se llena en segundo plano cada time-between-eviction-runs.
+        pool:
+          enabled: true
+          max-active: 32
+          max-idle: 32
+          min-idle: 16
+          time-between-eviction-runs: 1s
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -56,6 +66,16 @@ outbox:
     espera-ack: 30s
   purga:
     intervalo: 1h
+
+calentamiento:
+  # Riesgo "arranque en frío": llamadas sin efectos al arrancar, antes de recibir tráfico.
+  habilitado: true
+  # Fase paralela: iteraciones mínimas; fase de a una: hasta bajar del objetivo.
+  iteraciones-minimas: 400
+  objetivo: 20ms
+  duracion-maxima: 20s
+  # Iteraciones en paralelo: abre las conexiones de los pools antes de recibir tráfico.
+  hilos: 16
 
 management:
   endpoints:

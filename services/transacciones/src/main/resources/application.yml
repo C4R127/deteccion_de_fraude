@@ -55,6 +55,14 @@ outbox:
   purga:
     intervalo: 1h
 
+calentamiento:
+  # Riesgo "arranque en frío": llamadas sin efectos al arrancar, antes de recibir tráfico.
+  habilitado: true
+  # Se repite hasta el mínimo y hasta que la latencia media baje del objetivo (o el máximo).
+  iteraciones-minimas: 200
+  objetivo: 10ms
+  duracion-maxima: 20s
+
 management:
   endpoints:
     web:
