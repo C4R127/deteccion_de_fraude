@@ -236,14 +236,14 @@ decisión de respaldo (el scoring aún no existe).
 **Comportamiento:** §5.4 `perfil:{clienteId}` con la semántica definida ahí. Las
 horas se cuentan en `America/Lima`.
 
-- [ ] Pruebas:
+- [x] Pruebas:
   - `promedio_y_desviacion_de_30_dias` con montos conocidos.
   - `excluye_transacciones_de_mas_de_30_dias`.
   - `excluye_transacciones_rechazadas_del_promedio`.
   - `cuenta_horas_en_hora_de_lima` (una transacción a las 08:00Z cuenta en la hora 3).
   - `usa_la_fecha_del_evento_no_el_reloj`.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(perfiles): perfil de cliente con kafka streams`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(perfiles): perfil de cliente con kafka streams`.
 
 ### Tarea 3.2: Velocidad, última ubicación y dispositivos
 
