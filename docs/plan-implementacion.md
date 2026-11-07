@@ -305,7 +305,7 @@ horas se cuentan en `America/Lima`.
 
 **Comportamiento:** exactamente §7.2, incluido el texto de `detalle`.
 
-- [ ] Pruebas mínimas por regla (además del caso que dispara y el que no):
+- [x] Pruebas mínimas por regla (además del caso que dispara y el que no):
   - R01: no dispara con `n30d = 9`; monto igual a 5 × promedio no dispara.
   - R02: 4 previas no dispara; 5 previas dispara.
   - R03: Lima → Cusco en 10 minutos dispara; Lima → Callao en 2 horas no; tiempo 0
@@ -313,8 +313,8 @@ horas se cuentan en `America/Lima`.
   - R04 y R07: no disparan sin perfil suficiente.
   - R05: huella nula no dispara.
   - R07: 03:30 de Lima (08:30Z) dispara si `horas[3] = 0`.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(scoring): reglas R01 a R07`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(scoring): reglas R01 a R07`.
 
 ### Tarea 4.4: Motor de evaluación y endpoint interno
 
