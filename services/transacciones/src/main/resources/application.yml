@@ -4,6 +4,30 @@ server:
 spring:
   application:
     name: transacciones
+  # Secretos desde el .env de la raíz (ejecutando desde la raíz o desde el módulo).
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fraude
+    username: transacciones
+    password: ${TRANSACCIONES_DB_PASSWORD}
+    hikari:
+      schema: transacciones
+  flyway:
+    schemas: transacciones
+    default-schema: transacciones
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: transacciones
+        jdbc:
+          time_zone: UTC
 
 management:
   endpoints:

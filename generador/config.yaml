@@ -16,6 +16,8 @@ pesos_escenarios:
   USO_NOCTURNO: 1.0
 semilla: 42
 url_gateway: http://localhost:8080
+# La siembra usa /internal/v1, que no pasa por el gateway.
+url_transacciones: http://localhost:8081
 oauth:
   url_token: http://localhost:8180/realms/fraude/protocol/openid-connect/token
   client_id: generador

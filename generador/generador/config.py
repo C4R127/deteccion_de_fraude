@@ -33,6 +33,8 @@ class Config(BaseModel):
         default_factory=lambda: {e: 1.0 for e in ESCENARIOS})
     semilla: int = 42
     url_gateway: str = "http://localhost:8080"
+    # La siembra usa /internal/v1, que no pasa por el gateway (§11).
+    url_transacciones: str = "http://localhost:8081"
     oauth: OAuthConfig = Field(default_factory=OAuthConfig)
 
     @field_validator("distribucion_segmentos")

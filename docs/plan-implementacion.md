@@ -149,9 +149,9 @@ una tiene su prueba en la tarea indicada:
 - Modificar: generador, comando `siembra`
 - Prueba: `SiembraIT` (Testcontainers PostgreSQL)
 
-- [ ] Prueba: enviar la siembra dos veces no duplica registros (upsert por id/token).
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(transacciones): esquema y siembra de datos maestros`.
+- [x] Prueba: enviar la siembra dos veces no duplica registros (upsert por id/token).
+- [x] Implementar y verificar.
+- [x] Commit `feat(transacciones): esquema y siembra de datos maestros`.
 
 ### Tarea 2.2: API de transacciones con idempotencia y respaldo
 
