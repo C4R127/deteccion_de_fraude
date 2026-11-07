@@ -164,7 +164,9 @@ Cantidad de clientes configurable (inicial 500).
 - `historia --dias N`: genera N días de transacciones normales con fechas pasadas, lo
   más rápido posible, para llenar los perfiles. No inyecta fraude.
 - `vivo --tps T`: genera tráfico con fecha actual a T transacciones por segundo,
-  mezclando fraude según la proporción configurada (inicial 2 %).
+  mezclando fraude según la proporción configurada (inicial 2 %). Cada tarjeta espera
+  al menos 15 minutos entre transacciones normales y solo compra fuera de su ciudad si
+  el viaje es posible, así que con 500 clientes el máximo ronda 0,5 tps (ADR 0015).
 - `siembra`: crea clientes, tarjetas, comercios y dispositivos vía `/internal/v1/siembra`.
 - `metricas`: sube `verdad.jsonl` a `POST /api/v1/metricas/verdad`.
 
@@ -172,19 +174,22 @@ Cantidad de clientes configurable (inicial 500).
 
 | Escenario | Simulación | Regla esperada |
 |---|---|---|
-| `TARJETA_CLONADA` | Compra POS en ciudad o país lejano, minutos después de una compra local | R03 |
-| `CARD_TESTING` | 6 a 12 compras ECOMMERCE de 1 a 10 PEN en menos de 10 minutos | R02 |
+| `TARJETA_CLONADA` | Compra POS en una ciudad a 400 km o más, de 2 a 10 minutos después de una compra local | R03 |
+| `CARD_TESTING` | 6 a 12 compras ECOMMERCE de 1 a 10 PEN en menos de 10 minutos, con huella nueva en cada una | R02 + R05 |
 | `TOMA_DE_CUENTA` | Dispositivo nuevo y monto mayor a 5 veces el promedio | R05 + R01 |
 | `COMPRA_ATIPICA` | Monto muy alto en MCC de riesgo nunca usado | R01 + R06 |
-| `USO_NOCTURNO` | Varias operaciones entre 02:00 y 05:00 (Lima) en cliente sin historial a esa hora | R07 + otra |
+| `USO_NOCTURNO` | 2 a 4 compras en rubros de riesgo entre 02:00 y 05:00 (Lima) desde un dispositivo nuevo, en cliente sin historial a esa hora; solo se elige de madrugada | R07 + R05 + R06 |
 
-Cada transacción fraudulenta se escribe en `verdad.jsonl`:
+Los ajustes de `CARD_TESTING` y `USO_NOCTURNO` hacen que lleguen al umbral de 40 sin
+cambiar reglas (ADR 0015). La compra local de `TARJETA_CLONADA` es legítima.
+
+Cada transacción fraudulenta que la API registra se escribe en `verdad.jsonl`:
 `{"idExterno": "...", "escenario": "CARD_TESTING"}`.
 
 ### 6.4 Configuración
 
 Archivo `generador/config.yaml` validado con Pydantic: clientes, distribución de
-segmentos, tps, proporción de fraude, peso por escenario, semilla aleatoria, URL del
+segmentos, tps, espaciado por tarjeta, proporción de fraude, peso por escenario, semilla aleatoria, URL del
 gateway, credenciales del cliente OAuth `generador`. Misma semilla = misma corrida.
 
 ## 7. Motor de reglas

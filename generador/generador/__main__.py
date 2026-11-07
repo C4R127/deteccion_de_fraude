@@ -3,7 +3,8 @@
 - ``seco --dias N``: imprime transacciones normales en JSONL sin llamar a la API.
 - ``siembra``: crea clientes, tarjetas, comercios y dispositivos (endpoint interno).
 - ``historia --dias N``: envía N días de transacciones normales con fechas pasadas.
-- ``vivo --tps T``: envía transacciones con fecha actual a T por segundo.
+- ``vivo --tps T``: envía transacciones con fecha actual a T por segundo, mezclando los
+  escenarios de fraude (§6.3); cada fraude registrado se agrega a ``verdad.jsonl``.
 """
 
 import argparse
@@ -19,12 +20,14 @@ import numpy as np
 from generador.cliente_api import ProveedorToken, Resumen, enviar_transacciones, enviar_una
 from generador.clientes import crear_poblacion
 from generador.config import Config, cargar_config
+from generador.fraude import EscritorVerdad, MezcladorVivo, Planificada
 from generador.ids import GeneradorIds
 from generador.modelos import Poblacion
-from generador.normal import GeneradorVivo, generar_normal
+from generador.normal import generar_normal
 from generador.siembra import enviar_siembra
 
 CONFIG_POR_DEFECTO = Path(__file__).resolve().parents[1] / "config.yaml"
+VERDAD_POR_DEFECTO = Path(__file__).resolve().parents[1] / "verdad.jsonl"
 TIEMPO_LIMITE_HTTP = 60.0
 
 
@@ -50,6 +53,8 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     vivo = con_clientes(sub.add_parser("vivo", help="envía transacciones con fecha actual"))
     vivo.add_argument("--tps", type=float, help="transacciones por segundo (por defecto, la de config)")
     vivo.add_argument("--duracion", type=float, help="segundos de envío (por defecto, hasta Ctrl+C)")
+    vivo.add_argument("--verdad", type=Path, default=VERDAD_POR_DEFECTO,
+                      help="archivo JSONL donde se agregan los fraudes enviados")
     return parser.parse_args(argv)
 
 
@@ -83,30 +88,48 @@ async def _historia(config: Config, poblacion: Poblacion, rng: np.random.Generat
 
 
 async def _vivo(config: Config, poblacion: Poblacion, rng: np.random.Generator, tps: float,
-                duracion: float | None) -> int:
-    generador = GeneradorVivo(poblacion, rng, GeneradorIds(config.semilla, "vivo", datetime.now(timezone.utc)))
+                duracion: float | None, ruta_verdad: Path) -> int:
+    mezclador = MezcladorVivo(poblacion, config, rng,
+                              GeneradorIds(config.semilla, "vivo", datetime.now(timezone.utc)))
     resumen = Resumen()
+    fraudes = 0
+    # Turnos sin cliente disponible: tps mayor de lo que admite el espaciado (ADR 0015).
+    omitidas = 0
     intervalo = 1.0 / tps
-    inicio = time.monotonic()
     tareas: set[asyncio.Task] = set()
-    async with httpx.AsyncClient(timeout=TIEMPO_LIMITE_HTTP) as http:
-        proveedor = ProveedorToken(config.oauth, http)
-        enviadas = 0
-        while duracion is None or time.monotonic() - inicio < duracion:
-            # Ritmo fijo: la transacción n sale en inicio + n / tps.
-            espera = inicio + enviadas * intervalo - time.monotonic()
-            if espera > 0:
-                await asyncio.sleep(espera)
-            if duracion is not None and time.monotonic() - inicio >= duracion:
-                break
-            tx = generador.siguiente(datetime.now(timezone.utc))
-            tarea = asyncio.create_task(enviar_una(tx, config.url_gateway, http, proveedor, resumen))
-            tareas.add(tarea)
-            tarea.add_done_callback(tareas.discard)
-            enviadas += 1
-        if tareas:
-            await asyncio.gather(*tareas)
-    print(f"vivo terminado: {resumen.texto()}")
+
+    async def enviar(plan: Planificada) -> None:
+        nonlocal fraudes
+        registrada = await enviar_una(plan.tx, config.url_gateway, http, proveedor, resumen)
+        # Solo lo que la API registró: la verdad no debe nombrar transacciones inexistentes.
+        if registrada and plan.fraude:
+            verdad.registrar(plan.tx.idExterno, plan.escenario)
+            fraudes += 1
+
+    with EscritorVerdad(ruta_verdad) as verdad:
+        async with httpx.AsyncClient(timeout=TIEMPO_LIMITE_HTTP) as http:
+            proveedor = ProveedorToken(config.oauth, http)
+            # Después de crear el cliente HTTP, que en Windows tarda cientos de ms.
+            inicio = time.monotonic()
+            turnos = 0
+            while duracion is None or time.monotonic() - inicio < duracion:
+                # Ritmo fijo: el turno n sale en inicio + n / tps.
+                espera = inicio + turnos * intervalo - time.monotonic()
+                if espera > 0:
+                    await asyncio.sleep(espera)
+                if duracion is not None and time.monotonic() - inicio >= duracion:
+                    break
+                turnos += 1
+                plan = mezclador.siguiente(datetime.now(timezone.utc))
+                if plan is None:
+                    omitidas += 1
+                    continue
+                tarea = asyncio.create_task(enviar(plan))
+                tareas.add(tarea)
+                tarea.add_done_callback(tareas.discard)
+            if tareas:
+                await asyncio.gather(*tareas)
+    print(f"vivo terminado: {resumen.texto()} fraudes={fraudes} omitidas={omitidas}")
     return 0
 
 
@@ -129,7 +152,8 @@ def main(argv: list[str] | None = None) -> int:
         return asyncio.run(_historia(config, poblacion, rng, args.dias, args.concurrencia))
     if args.comando == "vivo":
         try:
-            return asyncio.run(_vivo(config, poblacion, rng, args.tps or config.tps, args.duracion))
+            return asyncio.run(_vivo(config, poblacion, rng, args.tps or config.tps, args.duracion,
+                                     args.verdad))
         except KeyboardInterrupt:
             return 0
     return 2

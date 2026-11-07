@@ -83,8 +83,11 @@ class Resumen:
 
 
 async def enviar_una(tx: TransaccionSalida, url_gateway: str, http: httpx.AsyncClient,
-                     proveedor: ProveedorToken, resumen: Resumen, espera_base: float = 0.05) -> None:
-    """Envía una transacción; reintenta con espera creciente ante 429 y renueva el token ante 401."""
+                     proveedor: ProveedorToken, resumen: Resumen, espera_base: float = 0.05) -> bool:
+    """Envía una transacción; reintenta con espera creciente ante 429 y renueva el token ante 401.
+
+    Devuelve ``True`` si la API la registró (201) o ya la tenía (200).
+    """
     url = url_gateway.rstrip("/") + RUTA_TRANSACCIONES
     cuerpo = tx.a_json()
     renovado = False
@@ -95,7 +98,7 @@ async def enviar_una(tx: TransaccionSalida, url_gateway: str, http: httpx.AsyncC
         except httpx.HTTPError:
             resumen.errores += 1
             resumen.enviadas += 1
-            return
+            return False
         if respuesta.status_code == 429:
             resumen.reintentos += 1
             await asyncio.sleep(espera_base * (2 ** intento))
@@ -107,15 +110,17 @@ async def enviar_una(tx: TransaccionSalida, url_gateway: str, http: httpx.AsyncC
         resumen.enviadas += 1
         if respuesta.status_code == 200:
             resumen.repetidas += 1
-        elif respuesta.status_code == 201:
+            return True
+        if respuesta.status_code == 201:
             datos = respuesta.json()
             resumen.decisiones[datos["decision"]] += 1
             resumen.respaldo += 1 if datos.get("respaldo") else 0
-        else:
-            resumen.errores += 1
-        return
+            return True
+        resumen.errores += 1
+        return False
     resumen.enviadas += 1
     resumen.errores += 1
+    return False
 
 
 async def enviar_transacciones(transacciones: Iterable[TransaccionSalida], url_gateway: str,

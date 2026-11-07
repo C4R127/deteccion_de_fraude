@@ -6,7 +6,10 @@ distribucion_segmentos:
   ESTANDAR: 0.60
   PREMIUM: 0.15
   JOVEN: 0.25
-tps: 20
+# vivo: con 500 clientes y 15 minutos entre transacciones de una tarjeta, el máximo
+# real ronda 0,55 tps (ADR 0015). Los 20 tps de la prueba de carga los genera k6.
+tps: 0.5
+espaciado_minutos: 15
 proporcion_fraude: 0.02
 pesos_escenarios:
   TARJETA_CLONADA: 1.0

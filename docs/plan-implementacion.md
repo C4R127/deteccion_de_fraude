@@ -358,14 +358,16 @@ evaluación del mismo `transaccionId` devuelve la guardada. Timer Micrometer
 - Crear: `pruebas-carga/scoring.js` (k6, 20 tps durante 2 minutos contra el gateway)
 - Prueba: `generador/tests/test_fraude.py`
 
-- [ ] Pruebas: cada escenario genera transacciones con la forma descrita en §6.3; la
+- [x] Pruebas: cada escenario genera transacciones con la forma descrita en §6.3; la
       proporción de fraude se respeta con tolerancia; cada fraude queda en
       `verdad.jsonl`.
-- [ ] Implementar y verificar.
-- [ ] Verificar: `k6 run pruebas-carga/scoring.js` y reportar el p95 del timer del
+- [x] Implementar y verificar. (ADR 0015: escenarios ajustados al umbral y ritmo de `vivo`.)
+- [x] Verificar: `k6 run pruebas-carga/scoring.js` y reportar el p95 del timer del
       scoring (objetivo < 50 ms, §7.4). Si no se cumple, reportar el valor; no
-      optimizar sin consultar.
-- [ ] Commit `feat(generador): escenarios de fraude y prueba de carga`.
+      optimizar sin consultar. (2401 solicitudes a 20 tps: p95 del timer 14 ms, p99 28 ms;
+      p95 de punta a punta 182 ms; 11 respaldos en el primer segundo; pool de
+      transacciones con máximo 8 de 10 conexiones activas y 0 en espera.)
+- [x] Commit `feat(generador): escenarios de fraude y prueba de carga`.
 
 **Cierre de fase 4:** cada transacción recibe su decisión en tiempo real por API.
 

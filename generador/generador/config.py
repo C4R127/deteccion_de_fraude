@@ -27,7 +27,9 @@ class Config(BaseModel):
     clientes: int = Field(default=500, ge=1)
     distribucion_segmentos: dict[str, float] = Field(
         default_factory=lambda: {"ESTANDAR": 0.6, "PREMIUM": 0.15, "JOVEN": 0.25})
-    tps: float = Field(default=20, gt=0)
+    tps: float = Field(default=0.5, gt=0)
+    # Minutos mínimos entre transacciones de una misma tarjeta en vivo (ADR 0015).
+    espaciado_minutos: float = Field(default=15, ge=0)
     proporcion_fraude: float = Field(default=0.02, ge=0, le=1)
     pesos_escenarios: dict[str, float] = Field(
         default_factory=lambda: {e: 1.0 for e in ESCENARIOS})

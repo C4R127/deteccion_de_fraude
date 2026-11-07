@@ -30,3 +30,6 @@ dist/
 # SO
 .DS_Store
 Thumbs.db
+
+# Datos de la prueba de carga (se generan con el generador)
+pruebas-carga/datos/

@@ -170,12 +170,13 @@ def test_comando_historia_envia_transacciones_con_fechas_pasadas(capsys):
 
 
 @respx.mock
-def test_comando_vivo_envia_a_la_tasa_indicada_con_fecha_actual():
+def test_comando_vivo_envia_a_la_tasa_indicada_con_fecha_actual(tmp_path):
     respx.post(URL_TOKEN).mock(return_value=_token())
     ruta = respx.post(URL_TX).mock(side_effect=_respuesta_ok)
 
     inicio = datetime.now(timezone.utc)
-    assert main(["vivo", "--tps", "10", "--duracion", "1", "--clientes", "10"]) == 0
+    assert main(["vivo", "--tps", "10", "--duracion", "1", "--clientes", "10",
+                 "--verdad", str(tmp_path / "verdad.jsonl")]) == 0
 
     assert 8 <= ruta.call_count <= 12
     for llamada in ruta.calls:
