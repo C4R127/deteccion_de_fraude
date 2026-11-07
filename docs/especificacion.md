@@ -99,7 +99,8 @@ generador (`POST /internal/v1/siembra`), no con datos fijos en migraciones.
 `creada_en timestamptz`, `creada_por text`. Editar una regla inserta una fila nueva con
 `version + 1` y marca la anterior `vigente = false`. Solo una fila vigente por código.
 
-**evaluacion** (solo INSERT): `id uuid pk`, `transaccion_id uuid unique`, `score int`,
+**evaluacion** (solo INSERT): `id uuid pk`, `transaccion_id uuid unique`, `id_externo uuid unique`
+(ADR 0011), `monto numeric(15,2)` (ADR 0011), `score int`,
 `decision text`, `reglas_disparadas jsonb`, `versiones_reglas jsonb`, `latencia_ms int`,
 `creada_en timestamptz`.
 
