@@ -3,13 +3,16 @@ package com.fraude.transacciones.transaccion;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.doThrow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fraude.common.eventos.Topicos;
-import com.fraude.common.eventos.TransaccionCreadaEvento;
 import com.fraude.transacciones.TestcontainersConfig;
 import com.fraude.transacciones.TokensDePrueba;
+import com.fraude.transacciones.outbox.OutboxStore;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.time.Duration;
@@ -28,12 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.event.EventListener;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -42,10 +40,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.kafka.KafkaContainer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({TestcontainersConfig.class, TokensDePrueba.class, PublicacionKafkaIT.FalloDespuesDePublicar.class})
+@Import({TestcontainersConfig.class, TokensDePrueba.class})
 class PublicacionKafkaIT {
 
     private static final String CLIENTE = "6f1c2d3e-0000-4000-8000-000000000001";
@@ -84,13 +83,16 @@ class PublicacionKafkaIT {
     @Autowired
     KafkaContainer kafka;
 
+    @MockitoSpyBean
+    OutboxStore outbox;
+
     @BeforeEach
     void preparar() {
         scoring.resetAll();
         scoring.stubFor(WireMock.post("/internal/v1/evaluaciones").willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"score\": 55, \"decision\": \"REVISAR\", \"reglasDisparadas\": []}")));
-        jdbc.execute("TRUNCATE transaccion, dispositivo, tarjeta, comercio, cliente CASCADE");
+        jdbc.execute("TRUNCATE outbox, transaccion, dispositivo, tarjeta, comercio, cliente CASCADE");
         jdbc.update("INSERT INTO cliente VALUES (?::uuid, 'Juan Perez', 'ESTANDAR', 'Lima', now())", CLIENTE);
         jdbc.update("INSERT INTO tarjeta VALUES (?::uuid, ?::uuid, 'tok_8c1f42a9', '4821', 'ACTIVA', now())",
                 TARJETA, CLIENTE);
@@ -184,42 +186,32 @@ class PublicacionKafkaIT {
         assertThat(evento.get("score").isNull()).isTrue();
     }
 
-    /**
-     * Oyente síncrono que corre al final, dentro de la transacción de base de datos y después
-     * de que se publicó el evento de aplicación: provoca el rollback de una transacción elegida.
-     * Si el publicador enviara a Kafka antes del commit, el evento ya habría salido.
-     */
-    @TestConfiguration(proxyBeanMethods = false)
-    static class FalloDespuesDePublicar {
-
-        static volatile String idExternoQueFalla;
-
-        @Bean
-        OyenteQueFalla oyenteQueFalla() {
-            return new OyenteQueFalla();
-        }
-    }
-
-    static class OyenteQueFalla {
-
-        @EventListener
-        @Order(Ordered.LOWEST_PRECEDENCE)
-        public void fallar(TransaccionCreadaEvento evento) {
-            if (evento.idExterno().toString().equals(FalloDespuesDePublicar.idExternoQueFalla)) {
-                throw new IllegalStateException("fallo simulado antes del commit");
-            }
-        }
-    }
-
     @Test
-    void si_la_base_de_datos_hace_rollback_no_se_publica() throws Exception {
+    void si_falla_el_guardado_del_outbox_no_queda_ni_la_transaccion_ni_el_evento() throws Exception {
         String idExterno = UUID.randomUUID().toString();
-        FalloDespuesDePublicar.idExternoQueFalla = idExterno;
+        doThrow(new IllegalStateException("fallo simulado al guardar el outbox"))
+                .when(outbox).guardar(any(), any(), contains(idExterno));
 
         var respuesta = enviar(idExterno, "tok_8c1f42a9");
 
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM transaccion", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM outbox WHERE payload::text LIKE ?", Integer.class,
+                "%" + idExterno + "%")).isZero();
         assertThat(eventosDe(idExterno, ESPERA_AUSENCIA)).isEmpty();
+    }
+
+    @Test
+    void el_evento_se_guarda_en_el_outbox_con_la_transaccion_y_se_marca_enviado() throws Exception {
+        String idExterno = UUID.randomUUID().toString();
+
+        enviar(idExterno, "tok_8c1f42a9");
+
+        var fila = jdbc.queryForMap("SELECT topico, clave FROM outbox WHERE payload::text LIKE ?",
+                "%" + idExterno + "%");
+        assertThat(fila).containsEntry("topico", "transacciones.creadas").containsEntry("clave", TARJETA);
+        assertThat(eventosDe(idExterno, Duration.ofSeconds(10))).hasSize(1);
+        assertThat(jdbc.queryForObject("SELECT enviado_en IS NOT NULL FROM outbox WHERE payload::text LIKE ?",
+                Boolean.class, "%" + idExterno + "%")).isTrue();
     }
 }

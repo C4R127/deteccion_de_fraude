@@ -24,7 +24,11 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
     producer:
+      # Reglas de Kafka de CLAUDE.md: confirmación de todas las réplicas e idempotencia.
       acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 120000
   flyway:
     schemas: transacciones
     default-schema: transacciones
@@ -44,8 +48,16 @@ scoring:
   # Tiempo máximo para la decisión antes de aplicar el respaldo (§3 paso 4).
   tiempo-limite: 200ms
 
+outbox:
+  publicador:
+    intervalo: 200ms
+    espera-ack: 30s
+  purga:
+    intervalo: 1h
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # metrics expone outbox.pendientes y outbox.fallos.
+        include: health,info,metrics

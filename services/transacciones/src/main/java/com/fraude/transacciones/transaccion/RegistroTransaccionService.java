@@ -5,16 +5,20 @@ import com.fraude.common.evaluacion.EvaluacionResultado;
 import com.fraude.common.evaluacion.EvaluacionSolicitud;
 import com.fraude.common.eventos.Canal;
 import com.fraude.common.eventos.Decision;
+import com.fraude.common.eventos.Topicos;
 import com.fraude.common.eventos.TransaccionCreadaEvento;
+import com.fraude.common.json.JsonFraude;
 import com.fraude.transacciones.maestros.Comercio;
 import com.fraude.transacciones.maestros.ComercioRepository;
 import com.fraude.transacciones.maestros.EstadoTarjeta;
 import com.fraude.transacciones.maestros.Tarjeta;
 import com.fraude.transacciones.maestros.TarjetaRepository;
+import com.fraude.transacciones.outbox.OutboxStore;
 import com.fraude.transacciones.scoring.ScoringClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -31,17 +35,17 @@ public class RegistroTransaccionService {
     private final TransaccionStore store;
     private final ScoringClient scoring;
     private final TransactionTemplate tx;
-    private final ApplicationEventPublisher eventos;
+    private final OutboxStore outbox;
+    private final ObjectMapper json = JsonFraude.objectMapper();
 
     public RegistroTransaccionService(TarjetaRepository tarjetas, ComercioRepository comercios,
-            TransaccionStore store, ScoringClient scoring, TransactionTemplate tx,
-            ApplicationEventPublisher eventos) {
+            TransaccionStore store, ScoringClient scoring, TransactionTemplate tx, OutboxStore outbox) {
         this.tarjetas = tarjetas;
         this.comercios = comercios;
         this.store = store;
         this.scoring = scoring;
         this.tx = tx;
-        this.eventos = eventos;
+        this.outbox = outbox;
     }
 
     /** Resultado del registro; {@code nueva = false} si el idExterno ya existía. */
@@ -70,10 +74,19 @@ public class RegistroTransaccionService {
             }
             TransaccionResponse respuesta = decidir(pendiente, tarjeta);
             store.registrarDecision(pendiente.id(), respuesta.decision(), respuesta.score(), respuesta.respaldo());
-            // Se publica en Kafka solo si esta transacción de base de datos hace commit (§3 paso 7).
-            eventos.publishEvent(evento(pendiente, respuesta));
+            // El evento va al outbox en esta misma transacción; el publicador lo envía (ADR 0010).
+            TransaccionCreadaEvento evento = evento(pendiente, respuesta);
+            outbox.guardar(Topicos.TRANSACCIONES_CREADAS, evento.tarjetaId().toString(), aJson(evento));
             return new Registro(respuesta, true);
         });
+    }
+
+    private String aJson(TransaccionCreadaEvento evento) {
+        try {
+            return json.writeValueAsString(evento);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("No se pudo serializar el evento " + evento.transaccionId(), e);
+        }
     }
 
     private static TransaccionCreadaEvento evento(TransaccionPendiente t, TransaccionResponse r) {
