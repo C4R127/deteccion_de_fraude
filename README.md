@@ -39,12 +39,17 @@ marcadores `${VAR}` y PostgreSQL los lee en `infra/postgres/init.sh`.
 cd generador
 py -3.12 -m venv .venv                 # Linux/macOS: python3.12 -m venv .venv
 .venv/Scripts/python -m pip install -e ".[dev]"   # Linux/macOS: .venv/bin/python
-.venv/Scripts/python -m generador seco --dias 1   # JSONL sin llamar a la API
+.venv/Scripts/python -m generador seco --dias 1        # JSONL sin llamar a la API
+.venv/Scripts/python -m generador siembra              # datos maestros (transacciones :8081)
+.venv/Scripts/python -m generador historia --dias 30   # fechas pasadas, vía gateway :8080
+.venv/Scripts/python -m generador vivo --tps 20        # fecha actual, Ctrl+C para parar
 .venv/Scripts/python -m pytest
 ```
 
 La configuración está en `generador/config.yaml`; misma `semilla` = misma corrida. El
-secreto del cliente OAuth se lee de `GENERADOR_CLIENT_SECRET` (`.env`).
+token se pide a Keycloak con el cliente `generador` (rol SISTEMA); el secreto se lee de
+`GENERADOR_CLIENT_SECRET` o del `.env` de la raíz. `siembra`, `historia` y `vivo` necesitan
+la infraestructura, `transacciones` y (salvo `siembra`) el `gateway` levantados.
 
 ## Módulos
 

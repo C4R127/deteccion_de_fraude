@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+from generador.cliente_api import ProveedorToken
 from generador.modelos import Poblacion
 
 RUTA_SIEMBRA = "/internal/v1/siembra"
@@ -42,8 +43,10 @@ def payload_siembra(poblacion: Poblacion) -> dict:
     }
 
 
-def enviar_siembra(poblacion: Poblacion, url_transacciones: str, cliente: httpx.Client) -> dict:
-    respuesta = cliente.post(url_transacciones.rstrip("/") + RUTA_SIEMBRA,
-                             json=payload_siembra(poblacion))
+async def enviar_siembra(poblacion: Poblacion, url_transacciones: str, http: httpx.AsyncClient,
+                         proveedor: ProveedorToken) -> dict:
+    """La siembra va directo a transacciones (no pasa por el gateway) con un token SISTEMA."""
+    respuesta = await http.post(url_transacciones.rstrip("/") + RUTA_SIEMBRA,
+                                json=payload_siembra(poblacion), headers=await proveedor.cabeceras())
     respuesta.raise_for_status()
     return respuesta.json()

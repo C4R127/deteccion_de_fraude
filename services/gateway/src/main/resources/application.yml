@@ -1,9 +1,65 @@
 server:
   port: 8080
 
+# Destinos de las rutas (los servicios se ejecutan desde el IDE, §13).
+rutas:
+  transacciones: http://localhost:8081
+  scoring: http://localhost:8082
+  casos: http://localhost:8084
+
+gateway:
+  limite:
+    # Límite de POST /api/v1/transacciones por cliente OAuth (§10, inicial 200/s).
+    por-segundo: 200
+    rafaga: 200
+
 spring:
   application:
     name: gateway
+  data:
+    redis:
+      # Valkey (compatible con el protocolo de Redis).
+      host: localhost
+      port: 6379
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/fraude
+          audiences: servicios
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: transacciones-crear
+              uri: ${rutas.transacciones}
+              predicates:
+                - Path=/api/v1/transacciones
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@clienteOAuth}"
+                    redis-rate-limiter.replenishRate: ${gateway.limite.por-segundo}
+                    redis-rate-limiter.burstCapacity: ${gateway.limite.rafaga}
+                    redis-rate-limiter.requestedTokens: 1
+            - id: transacciones
+              uri: ${rutas.transacciones}
+              predicates:
+                - Path=/api/v1/transacciones/**,/api/v1/clientes/*/transacciones
+            - id: scoring
+              uri: ${rutas.scoring}
+              predicates:
+                - Path=/api/v1/clientes/*/perfil,/api/v1/reglas/**,/api/v1/listas-bloqueo/**,/api/v1/evaluaciones/**,/api/v1/metricas/**
+            - id: casos
+              uri: ${rutas.casos}
+              predicates:
+                - Path=/api/v1/casos/**
+            - id: casos-ws
+              uri: ${rutas.casos}
+              predicates:
+                - Path=/ws/**
 
 management:
   endpoints:

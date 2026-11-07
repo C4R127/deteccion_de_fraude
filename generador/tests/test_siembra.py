@@ -4,6 +4,7 @@ import json
 
 import httpx
 import numpy as np
+import pytest
 import respx
 
 from generador.__main__ import main
@@ -12,6 +13,12 @@ from generador.config import Config
 from generador.siembra import payload_siembra
 
 URL = "http://localhost:8081/internal/v1/siembra"
+URL_TOKEN = "http://localhost:8180/realms/fraude/protocol/openid-connect/token"
+
+
+@pytest.fixture(autouse=True)
+def token(monkeypatch):
+    monkeypatch.setenv("GENERADOR_CLIENT_SECRET", "secreto-de-prueba")
 
 
 def _poblacion():
@@ -46,6 +53,7 @@ def test_payload_es_json_serializable_con_fechas_utc():
 
 @respx.mock
 def test_comando_siembra_envia_la_poblacion_al_endpoint_interno(capsys):
+    respx.post(URL_TOKEN).mock(return_value=httpx.Response(200, json={"access_token": "t", "expires_in": 300}))
     ruta = respx.post(URL).mock(return_value=httpx.Response(
         200, json={"clientes": 20, "tarjetas": 20, "comercios": 1, "dispositivos": 30}))
 
@@ -60,6 +68,7 @@ def test_comando_siembra_envia_la_poblacion_al_endpoint_interno(capsys):
 
 @respx.mock
 def test_comando_siembra_falla_si_la_api_responde_error(capsys):
+    respx.post(URL_TOKEN).mock(return_value=httpx.Response(200, json={"access_token": "t", "expires_in": 300}))
     respx.post(URL).mock(return_value=httpx.Response(422, json={"title": "Validación fallida"}))
 
     codigo = main(["siembra", "--clientes", "5"])

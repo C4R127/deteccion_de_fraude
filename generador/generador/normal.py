@@ -55,8 +55,27 @@ def generar_normal(poblacion: Poblacion, desde: datetime, hasta: datetime,
         dia += timedelta(days=1)  # Lima no tiene horario de verano
 
 
-def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime, indice: _Indice,
-                 rng: np.random.Generator) -> TransaccionSalida:
+class GeneradorVivo:
+    """Transacciones normales con la fecha que se indique (modo ``vivo``)."""
+
+    def __init__(self, poblacion: Poblacion, rng: np.random.Generator):
+        self._poblacion = poblacion
+        self._rng = rng
+        self._indice = _Indice(poblacion.comercios)
+        self._tarjeta_de = {t.cliente_id: t for t in poblacion.tarjetas}
+        pesos = np.array([c.transacciones_por_dia for c in poblacion.clientes])
+        self._pesos = pesos / pesos.sum()
+
+    def siguiente(self, fecha: datetime) -> TransaccionSalida:
+        """Una transacción de un cliente elegido según su frecuencia de compra."""
+        cliente = self._poblacion.clientes[int(self._rng.choice(len(self._poblacion.clientes), p=self._pesos))]
+        return _transaccion(cliente, self._tarjeta_de[cliente.id], None, self._indice, self._rng,
+                            fecha=fecha.astimezone(timezone.utc).replace(microsecond=0))
+
+
+def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime | None, indice: _Indice,
+                 rng: np.random.Generator, fecha: datetime | None = None) -> TransaccionSalida:
+    """Si ``fecha`` es nula, la hora se elige entre las habituales del cliente en ``dia_lima``."""
     canales = [c for c, _ in cliente.canales_habituales]
     pesos = np.array([p for _, p in cliente.canales_habituales])
     canal = str(rng.choice(canales, p=pesos / pesos.sum()))
@@ -79,9 +98,11 @@ def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime, indice:
         dispositivo = None
         monto = _monto_compra(cliente, rng)
 
-    hora = int(rng.choice(cliente.horas_habituales))
-    local = dia_lima.replace(hour=hora, minute=int(rng.integers(0, 60)),
-                             second=int(rng.integers(0, 60)))
+    if fecha is None:
+        hora = int(rng.choice(cliente.horas_habituales))
+        local = dia_lima.replace(hour=hora, minute=int(rng.integers(0, 60)),
+                                 second=int(rng.integers(0, 60)))
+        fecha = local.astimezone(timezone.utc)
     return TransaccionSalida(
         idExterno=uuid_determinista(rng),
         tarjetaToken=tarjeta.token,
@@ -93,7 +114,7 @@ def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime, indice:
         pais=comercio.pais,
         latitud=comercio.latitud,
         longitud=comercio.longitud,
-        fecha=local.astimezone(timezone.utc),
+        fecha=fecha,
     )
 
 

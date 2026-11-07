@@ -211,12 +211,12 @@ Una transacción repetida por idempotencia no se publica de nuevo.
   y `httpx` asíncrono
 - Prueba: `GatewaySeguridadIT`; `generador/tests/test_cliente_api.py` (con `respx`)
 
-- [ ] Pruebas: sin token → 401; rol ANALISTA en `POST /api/v1/transacciones` → 403;
+- [x] Pruebas: sin token → 401; rol ANALISTA en `POST /api/v1/transacciones` → 403;
       `/internal/v1/**` no es accesible por el gateway → 404; superar el límite → 429.
-- [ ] Implementar y verificar.
-- [ ] Verificar de punta a punta: `python -m generador siembra` y
+- [x] Implementar y verificar.
+- [x] Verificar de punta a punta: `python -m generador siembra` y
       `python -m generador historia --dias 1`; los mensajes aparecen en Kafka UI.
-- [ ] Commit `feat(gateway): seguridad, rutas y limite de uso`.
+- [x] Commit `feat(gateway): seguridad, rutas y limite de uso`.
 
 **Cierre de fase 2:** transacciones del generador llegan a PostgreSQL y a Kafka con
 decisión de respaldo (el scoring aún no existe).
