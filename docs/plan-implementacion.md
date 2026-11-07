@@ -386,12 +386,13 @@ evaluación del mismo `transaccionId` devuelve la guardada. Timer Micrometer
 **Comportamiento:** §8.1 y §8.2; prioridad según §7.3; enmascarado de nombre para
 AUDITOR (§10).
 
-- [ ] Pruebas: el mismo evento dos veces crea un solo caso; cada transición válida
+- [x] Pruebas: el mismo evento dos veces crea un solo caso; cada transición válida
       inserta historial; transición inválida → 409; cerrar sin `resolucion` → 422; un
       analista no asignado no puede cerrar (403); el cierre publica
       `CasoCerradoEvento`; la bandeja ordena por prioridad y antigüedad.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(casos): ciclo de vida de casos`.
+- [x] Implementar y verificar. (ADR 0016: el nombre enmascarado lo sirve transacciones
+      en `GET /api/v1/clientes/{id}`.)
+- [x] Commit `feat(casos): ciclo de vida de casos`.
 
 ### Tarea 5.2: Casos en vivo
 

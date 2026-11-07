@@ -19,6 +19,8 @@ public class TokensDePrueba {
 
     public static final String SISTEMA = "rol-SISTEMA";
     public static final String ANALISTA = "rol-ANALISTA";
+    public static final String AUDITOR = "rol-AUDITOR";
+    public static final String SUPERVISOR = "rol-SUPERVISOR";
 
     @Bean
     JwtDecoder jwtDecoderDePrueba() {

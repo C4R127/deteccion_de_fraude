@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,8 +54,36 @@ class ProblemDetailsHandlerTest {
                 .andExpect(jsonPath("$.detail").value("Comercio COM-1 no existe"));
     }
 
+    @Test
+    void conflicto_de_estado_devuelve_409() throws Exception {
+        mvc.perform(get("/conflicto"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.detail").value("El caso está CERRADO"));
+    }
+
+    @Test
+    void acceso_denegado_en_el_controlador_devuelve_403() throws Exception {
+        mvc.perform(get("/prohibido"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.detail").value("Solo el analista asignado"));
+    }
+
     @RestController
     static class ControladorPrueba {
+
+        @GetMapping("/conflicto")
+        String conflicto() {
+            throw new ConflictoException("El caso está CERRADO");
+        }
+
+        @GetMapping("/prohibido")
+        String prohibido() {
+            throw new AccessDeniedException("Solo el analista asignado");
+        }
 
         @GetMapping("/explota")
         String explota() {

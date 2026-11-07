@@ -4,9 +4,54 @@ server:
 spring:
   application:
     name: casos
+  # Secretos desde el .env de la raíz (ejecutando desde la raíz o desde el módulo).
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fraude
+    username: casos
+    password: ${CASOS_DB_PASSWORD}
+    hikari:
+      schema: casos
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/fraude
+          audiences: servicios
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: casos
+      auto-offset-reset: earliest
+      # Reglas de Kafka de CLAUDE.md: offsets confirmados solo después del efecto.
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+    producer:
+      # Reglas de Kafka de CLAUDE.md: confirmación de todas las réplicas e idempotencia.
+      acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 120000
+  flyway:
+    schemas: casos
+    default-schema: casos
+    locations: classpath:db/migration
+
+outbox:
+  publicador:
+    intervalo: 200ms
+    espera-ack: 30s
+  purga:
+    intervalo: 1h
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics

@@ -307,6 +307,7 @@ para AUDITOR (ej. "J*** P***"); límite de uso en `POST /api/v1/transacciones`
 |---|---|---|
 | `POST /api/v1/transacciones` | transacciones | SISTEMA |
 | `GET /api/v1/transacciones/{id}` | transacciones | lectura |
+| `GET /api/v1/clientes/{id}` | transacciones (nombre enmascarado para AUDITOR, ADR 0016) | lectura |
 | `GET /api/v1/clientes/{id}/transacciones?limite=20` | transacciones | lectura |
 | `GET /api/v1/clientes/{id}/perfil` | scoring (lee Valkey) | lectura |
 | `POST /internal/v1/siembra` | transacciones | SISTEMA |
@@ -316,7 +317,7 @@ para AUDITOR (ej. "J*** P***"); límite de uso en `POST /api/v1/transacciones`
 | `GET /api/v1/evaluaciones/{transaccionId}` | scoring | lectura |
 | `POST /api/v1/metricas/verdad` | scoring | ADMIN, SISTEMA |
 | `GET /api/v1/metricas` | scoring | lectura |
-| `GET /api/v1/casos` | casos | lectura |
+| `GET /api/v1/casos?estado=&prioridad=&analista=&desde=&hasta=&pagina=&tamano=` | casos | lectura |
 | `GET /api/v1/casos/{id}` | casos | lectura |
 | `POST /api/v1/casos/{id}/tomar` | casos | ANALISTA, SUPERVISOR, ADMIN |
 | `POST /api/v1/casos/{id}/asignar` | casos | SUPERVISOR, ADMIN |

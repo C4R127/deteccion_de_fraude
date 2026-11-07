@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -50,6 +51,21 @@ public class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail solicitudInvalida(SolicitudInvalidaException ex) {
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         problema.setTitle("Validación fallida");
+        return problema;
+    }
+
+    @ExceptionHandler(ConflictoException.class)
+    public ProblemDetail conflicto(ConflictoException ex) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problema.setTitle("Conflicto de estado");
+        return problema;
+    }
+
+    /** Permisos que dependen del recurso (p. ej. solo el analista asignado), comprobados en el servicio. */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail accesoDenegado(AccessDeniedException ex) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problema.setTitle("Acceso denegado");
         return problema;
     }
 
