@@ -328,13 +328,13 @@ de cada regla. Publica `DecisionSospechosaEvento` si REVISAR o RECHAZAR. Una seg
 evaluación del mismo `transaccionId` devuelve la guardada. Timer Micrometer
 `scoring.evaluacion.latencia` con percentiles 0.5, 0.95 y 0.99.
 
-- [ ] Pruebas: lista de bloqueo → RECHAZAR con 100 y solo B01; suma de puntos con tope
+- [x] Pruebas: lista de bloqueo → RECHAZAR con 100 y solo B01; suma de puntos con tope
       100; límites 39/40 y 69/70; reglas inactivas no se evalúan; se publica evento
       solo para REVISAR y RECHAZAR; evaluación repetida no duplica fila ni evento.
-- [ ] Implementar y verificar.
-- [ ] Verificar de punta a punta: con el scoring levantado, el generador recibe
+- [x] Implementar y verificar.
+- [x] Verificar de punta a punta: con el scoring levantado, el generador recibe
       decisiones sin `respaldo`.
-- [ ] Commit `feat(scoring): motor de evaluacion en linea`.
+- [x] Commit `feat(scoring): motor de evaluacion en linea`.
 
 ### Tarea 4.5: Bloqueo por casos y APIs de administración
 

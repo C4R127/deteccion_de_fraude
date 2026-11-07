@@ -20,6 +20,14 @@ spring:
       # Valkey (lo escribe perfiles; scoring solo lee).
       host: localhost
       port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      # Reglas de Kafka de CLAUDE.md: confirmación de todas las réplicas e idempotencia.
+      acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 120000
   flyway:
     schemas: scoring
     default-schema: scoring
@@ -33,6 +41,21 @@ spring:
         default_schema: scoring
         jdbc:
           time_zone: UTC
+
+scoring:
+  # Debe ser el mismo tiempo límite que usa transacciones (ADR 0012).
+  tiempo-limite: 200ms
+  umbrales:
+    # §7.3: 0–39 APROBAR, 40–69 REVISAR, 70–100 RECHAZAR.
+    revisar: 40
+    rechazar: 70
+
+outbox:
+  publicador:
+    intervalo: 200ms
+    espera-ack: 30s
+  purga:
+    intervalo: 1h
 
 management:
   endpoints:

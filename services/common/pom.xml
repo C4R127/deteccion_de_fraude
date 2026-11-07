@@ -52,6 +52,12 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Outbox transaccional (ADR 0010); lo aportan los servicios que lo usan. -->
         <dependency>
             <groupId>org.springframework</groupId>
