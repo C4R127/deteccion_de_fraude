@@ -62,10 +62,15 @@ public class ListaBloqueoService {
         return jdbc.query("SELECT * FROM lista_bloqueo ORDER BY creada_en DESC", ListaBloqueoService::entrada);
     }
 
-    /** Vence la entrada ahora (deja de bloquear, la fila se conserva). */
-    public void vencer(UUID id) {
-        int filas = jdbc.update("UPDATE lista_bloqueo SET vigente_hasta = now() "
-                + "WHERE id = ? AND (vigente_hasta IS NULL OR vigente_hasta > now())", id);
+    /**
+     * Vence la entrada en {@code ahora} (deja de bloquear, la fila se conserva). Usa el reloj de
+     * la aplicación, el mismo con el que {@link #buscar} compara: con {@code now()} de la base
+     * de datos, una diferencia de relojes dejaba vigente una entrada recién vencida.
+     */
+    public void vencer(UUID id, Instant ahora) {
+        Timestamp momento = Timestamp.from(ahora);
+        int filas = jdbc.update("UPDATE lista_bloqueo SET vigente_hasta = ? "
+                + "WHERE id = ? AND (vigente_hasta IS NULL OR vigente_hasta > ?)", momento, id, momento);
         if (filas == 0 && jdbc.queryForObject("SELECT count(*) FROM lista_bloqueo WHERE id = ?", Integer.class, id) == 0) {
             throw new RecursoNoEncontradoException("La entrada " + id + " no existe");
         }

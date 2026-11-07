@@ -53,6 +53,6 @@ public class ListaBloqueoController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void vencer(@PathVariable UUID id) {
-        bloqueos.vencer(id);
+        bloqueos.vencer(id, Instant.now());
     }
 }
