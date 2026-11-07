@@ -7,7 +7,9 @@ import com.fraude.common.json.JsonFraude;
 import com.fraude.perfiles.perfil.EscritorPerfil;
 import com.fraude.perfiles.perfil.HistorialCliente;
 import com.fraude.perfiles.perfil.HistorialCliente.Movimiento;
+import com.fraude.perfiles.valkey.EscritorEvento;
 import java.time.Duration;
+import java.util.List;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -22,18 +24,23 @@ import org.apache.kafka.streams.state.Stores;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 /**
- * Topología de perfiles: consume {@code transacciones.creadas} con tiempo de evento, reparte
- * por cliente y recalcula {@code perfil:{clienteId}} con la ventana de 30 días (§5.4).
+ * Topología de perfiles: consume {@code transacciones.creadas} con tiempo de evento.
+ * Cada evento va a los escritores por evento (velocidad, última ubicación, dispositivos),
+ * con clave {@code tarjetaId}; luego se reparte por cliente y se recalcula
+ * {@code perfil:{clienteId}} con la ventana de 30 días (§5.4).
  */
 public class TopologiaPerfiles {
 
     static final String ALMACEN_HISTORIAL = "historial-cliente";
 
     private final EscritorPerfil escritorPerfil;
+    private final List<EscritorEvento> escritoresEvento;
     private final Duration ventana;
 
-    public TopologiaPerfiles(EscritorPerfil escritorPerfil, Duration ventana) {
+    public TopologiaPerfiles(EscritorPerfil escritorPerfil, List<EscritorEvento> escritoresEvento,
+            Duration ventana) {
         this.escritorPerfil = escritorPerfil;
+        this.escritoresEvento = List.copyOf(escritoresEvento);
         this.ventana = ventana;
     }
 
@@ -50,6 +57,12 @@ public class TopologiaPerfiles {
 
         KStream<String, TransaccionCreadaEvento> transacciones = builder.stream(Topicos.TRANSACCIONES_CREADAS,
                 Consumed.with(Serdes.String(), serde).withTimestampExtractor(new ExtractorFechaEvento()));
+
+        transacciones.foreach((tarjetaId, evento) -> {
+            if (evento != null && evento.fecha() != null) {
+                escritoresEvento.forEach(escritor -> escritor.escribir(evento));
+            }
+        });
 
         transacciones
                 .selectKey((tarjetaId, evento) -> evento.clienteId().toString())

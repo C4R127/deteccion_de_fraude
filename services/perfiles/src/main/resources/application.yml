@@ -1,9 +1,25 @@
 server:
   port: 8083
 
+perfiles:
+  # Ventana del perfil, relativa a la última fecha de evento del cliente (§5.4).
+  ventana: 30d
+
 spring:
   application:
     name: perfiles
+  data:
+    redis:
+      # Valkey (compatible con el protocolo de Redis).
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    streams:
+      application-id: perfiles
+      properties:
+        # Tópico nuevo o reinicio sin offsets: procesar desde el principio (historia).
+        auto.offset.reset: earliest
 
 management:
   endpoints:

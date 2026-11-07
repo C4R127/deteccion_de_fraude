@@ -15,7 +15,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -37,6 +39,7 @@ class TopologiaPerfilesTest {
 
     private final ObjectMapper mapper = JsonFraude.objectMapper();
     private final EscritorFalso escritor = new EscritorFalso();
+    private final List<TransaccionCreadaEvento> eventos = new ArrayList<>();
     private TopologyTestDriver driver;
     private TestInputTopic<String, String> entrada;
 
@@ -55,7 +58,7 @@ class TopologiaPerfilesTest {
     @BeforeEach
     void crear() throws Exception {
         StreamsBuilder builder = new StreamsBuilder();
-        new TopologiaPerfiles(escritor, Duration.ofDays(30)).agregar(builder);
+        new TopologiaPerfiles(escritor, List.of(eventos::add), Duration.ofDays(30)).agregar(builder);
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "perfiles-prueba");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "no-usado:9092");
@@ -186,5 +189,15 @@ class TopologiaPerfilesTest {
         assertThat(perfil().n30d()).isZero();
         assertThat(perfil().promedio30d()).isEqualByComparingTo("0.00");
         assertThat(perfil().paises()).isEmpty();
+    }
+
+    @Test
+    void los_escritores_por_evento_reciben_todas_las_transacciones_con_clave_tarjeta() throws Exception {
+        enviar("100.00", BASE, Decision.APROBAR, "PE", "5411");
+        enviar("200.00", BASE.plus(Duration.ofMinutes(1)), Decision.RECHAZAR, "PE", "5411");
+
+        assertThat(eventos).extracting(TransaccionCreadaEvento::decision)
+                .containsExactly(Decision.APROBAR, Decision.RECHAZAR);
+        assertThat(eventos).allSatisfy(e -> assertThat(e.tarjetaId()).isEqualTo(TARJETA));
     }
 }
