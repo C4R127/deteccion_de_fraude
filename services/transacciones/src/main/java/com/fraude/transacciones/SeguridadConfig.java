@@ -21,7 +21,8 @@ public class SeguridadConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        // Métricas (outbox.pendientes, outbox.fallos) para monitoreo; el servicio no se expone fuera.
+                        .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/internal/v1/siembra").hasRole("SISTEMA")
                         .requestMatchers(HttpMethod.POST, "/api/v1/transacciones").hasRole("SISTEMA")
                         .requestMatchers("/api/v1/**").authenticated()

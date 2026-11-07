@@ -387,4 +387,12 @@ class TransaccionApiIT {
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(filas()).isZero();
     }
+
+    @Test
+    void las_metricas_del_outbox_se_leen_sin_token() {
+        var respuesta = http.getForEntity("/actuator/metrics/outbox.pendientes", String.class);
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(respuesta.getBody()).contains("outbox.pendientes");
+    }
 }
