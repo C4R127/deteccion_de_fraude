@@ -29,6 +29,11 @@ spring:
         jdbc:
           time_zone: UTC
 
+scoring:
+  url: http://localhost:8082
+  # Tiempo máximo para la decisión antes de aplicar el respaldo (§3 paso 4).
+  tiempo-limite: 200ms
+
 management:
   endpoints:
     web:

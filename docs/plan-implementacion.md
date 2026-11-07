@@ -169,7 +169,7 @@ una tiene su prueba en la tarea indicada:
 Resilience4j `TimeLimiter` (200 ms configurable) y respaldo
 `APROBAR, respaldo = true, score = null`.
 
-- [ ] Pruebas:
+- [x] Pruebas:
   - `crea_transaccion_y_devuelve_decision_del_scoring` → 201 con la decisión simulada.
   - `id_externo_repetido_devuelve_la_misma_respuesta` → segunda llamada 200, mismo
     cuerpo, una sola fila.
@@ -181,8 +181,8 @@ Resilience4j `TimeLimiter` (200 ms configurable) y respaldo
   - `validaciones_devuelven_422` (monto 0, 3 decimales, moneda USD, ECOMMERCE con
     coordenadas, POS sin coordenadas).
   - `tarjeta_bloqueada_se_rechaza_sin_llamar_al_scoring`.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(transacciones): api con idempotencia y decision de respaldo`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(transacciones): api con idempotencia y decision de respaldo`.
 
 ### Tarea 2.3: Publicación de eventos
 
