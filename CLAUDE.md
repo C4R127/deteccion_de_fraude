@@ -127,6 +127,44 @@ k6 run pruebas-carga/scoring.js
 - **Versiones:** fija versiones de dependencias e imágenes Docker; nunca `latest`.
 - **Secretos:** en `.env` (ignorado por git); entrega un `.env.example`.
 
+## Reglas obligatorias de Kafka (riesgos a evitar)
+
+Cada punto cierra un riesgo concreto. Ningún código que produzca o consuma eventos se
+da por terminado sin cumplirlos y sin una prueba que lo demuestre.
+
+- **Nunca perder eventos (outbox):** el evento se guarda en una tabla `outbox` del
+  esquema del servicio **en la misma transacción de base de datos** que el cambio de
+  negocio; un publicador lo envía a Kafka y lo marca como enviado solo tras el `ack`.
+  Prohibido publicar directo desde el código de negocio, incluso con `AFTER_COMMIT`.
+  Reintentos con espera creciente; los fallidos quedan visibles (log de error + métrica).
+- **Productores seguros:** `acks=all`, `enable.idempotence=true`, reintentos
+  ilimitados dentro de `delivery.timeout.ms`. Nunca enviar sin esperar el resultado.
+- **Consumidores idempotentes:** todo consumidor tolera el mismo mensaje dos veces
+  (entrega al menos una vez). Deduplica por un id del evento (`transaccionId`,
+  `casoId`) con restricción `unique` o tabla de mensajes procesados, en la misma
+  transacción que su efecto. Prueba obligatoria: "el mismo evento dos veces no duplica".
+- **Commit de offsets después del efecto:** nunca confirmar un offset antes de
+  persistir el resultado. Sin auto-commit en consumidores con efectos en BD.
+- **Mensajes venenosos:** un mensaje que no se puede deserializar o procesar tras los
+  reintentos va a un tópico `<tópico>.dlt` (dead letter) con su error; nunca bloquea
+  la partición ni se descarta en silencio.
+- **Compatibilidad de eventos:** solo cambios compatibles hacia atrás (agregar campos
+  opcionales). Un cambio incompatible exige `version` nueva, consumidores que lean
+  ambas y un ADR. Los consumidores validan los campos obligatorios al leer y mandan a
+  DLT lo inválido en vez de ignorarlo.
+- **Orden:** clave = `tarjetaId` siempre; nunca cambiar el número de particiones de un
+  tópico existente sin ADR (rompe el orden por tarjeta). Lo que dependa del orden por
+  cliente usa la `fecha` del evento, nunca el orden de llegada.
+- **Kafka Streams:** `processing.guarantee=exactly_once_v2`; `application-id` fijo
+  (cambiarlo reprocesa todo); estado local reconstruible desde el changelog.
+- **Durabilidad fuera de local:** factor de replicación ≥ 3 y `min.insync.replicas=2`
+  en cualquier entorno que no sea el docker-compose local (allí 1 es aceptable y está
+  documentado).
+- **Observabilidad:** exponer el lag de consumidores y el tamaño del outbox pendiente
+  como métricas; alertar si crecen.
+- **Datos de prueba:** las pruebas usan siempre el Kafka de Testcontainers; si una
+  prueba toca el Kafka local, es un error a corregir.
+
 ## Trampas conocidas
 
 - Kafka Streams debe usar el **tiempo del evento** (`fecha` del payload), no el reloj

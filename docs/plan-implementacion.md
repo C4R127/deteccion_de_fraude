@@ -251,13 +251,13 @@ horas se cuentan en `America/Lima`.
 - Crear: `EscritorVelocidad`, `EscritorUltima`, `EscritorDispositivos`
 - Prueba: `EscritoresValkeyIT` (Testcontainers Valkey)
 
-- [ ] Pruebas: `velocidad` poda entradas de más de 1 hora; `velocidad` y `ultima`
+- [x] Pruebas: `velocidad` poda entradas de más de 1 hora; `velocidad` y `ultima`
       incluyen RECHAZADAS; `dispositivos` solo agrega huellas de APROBAR; reprocesar
       el mismo evento no duplica entradas en `velocidad`.
-- [ ] Implementar y verificar.
-- [ ] Verificar: `python -m generador historia --dias 30` y revisar en Valkey que
+- [x] Implementar y verificar.
+- [x] Verificar: `python -m generador historia --dias 30` y revisar en Valkey que
       existen claves `perfil:*` con `n30d` mayor a 10 para la mayoría de clientes.
-- [ ] Commit `feat(perfiles): velocidad, ultima ubicacion y dispositivos`.
+- [x] Commit `feat(perfiles): velocidad, ultima ubicacion y dispositivos`.
 
 ---
 
