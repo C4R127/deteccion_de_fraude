@@ -30,8 +30,23 @@ spring:
           max-idle: 32
           min-idle: 16
           time-between-eviction-runs: 1s
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/fraude
+          audiences: servicios
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: scoring
+      auto-offset-reset: earliest
+      # Reglas de Kafka de CLAUDE.md: offsets confirmados solo después del efecto.
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
     producer:
       # Reglas de Kafka de CLAUDE.md: confirmación de todas las réplicas e idempotencia.
       acks: all

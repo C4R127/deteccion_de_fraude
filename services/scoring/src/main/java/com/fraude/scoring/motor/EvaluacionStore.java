@@ -8,7 +8,9 @@ import com.fraude.common.evaluacion.EvaluacionSolicitud;
 import com.fraude.common.eventos.Decision;
 import com.fraude.common.eventos.ReglaDisparada;
 import com.fraude.common.json.JsonFraude;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.Map;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +52,35 @@ public class EvaluacionStore {
                 (rs, n) -> new EvaluacionResultado(rs.getInt("score"), Decision.valueOf(rs.getString("decision")),
                         deJson(rs.getString("reglas"))),
                 transaccionId).stream().findFirst();
+    }
+
+    /** Evaluación completa para la consulta {@code GET /api/v1/evaluaciones/{transaccionId}}. */
+    public record EvaluacionDetalle(UUID transaccionId, UUID idExterno, BigDecimal monto, int score,
+            Decision decision, List<ReglaDisparada> reglasDisparadas, Map<String, Integer> versionesReglas,
+            int latenciaMs, boolean tardia, Instant creadaEn) {
+    }
+
+    private static final TypeReference<Map<String, Integer>> MAPA_VERSIONES = new TypeReference<>() {
+    };
+
+    public Optional<EvaluacionDetalle> detalle(UUID transaccionId) {
+        return jdbc.query("SELECT transaccion_id, id_externo, monto, score, decision, reglas_disparadas::text AS reglas, "
+                        + "versiones_reglas::text AS versiones, latencia_ms, tardia, creada_en "
+                        + "FROM evaluacion WHERE transaccion_id = ?",
+                (rs, n) -> new EvaluacionDetalle(rs.getObject("transaccion_id", UUID.class),
+                        rs.getObject("id_externo", UUID.class), rs.getBigDecimal("monto"), rs.getInt("score"),
+                        Decision.valueOf(rs.getString("decision")), deJson(rs.getString("reglas")),
+                        versiones(rs.getString("versiones")), rs.getInt("latencia_ms"), rs.getBoolean("tardia"),
+                        rs.getTimestamp("creada_en").toInstant()),
+                transaccionId).stream().findFirst();
+    }
+
+    private Map<String, Integer> versiones(String texto) {
+        try {
+            return json.readValue(texto, MAPA_VERSIONES);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Versiones de reglas ilegibles", e);
+        }
     }
 
     private String aJson(Object valor) {

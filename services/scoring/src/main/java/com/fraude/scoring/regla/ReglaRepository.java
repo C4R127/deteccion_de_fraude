@@ -11,6 +11,8 @@ public interface ReglaRepository extends JpaRepository<ReglaEntity, UUID> {
 
     List<ReglaEntity> findByVigenteTrueOrderByCodigo();
 
+    List<ReglaEntity> findByCodigoOrderByVersionDesc(String codigo);
+
     /** Bloquea la fila vigente para que dos ediciones simultáneas no creen la misma versión. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<ReglaEntity> findByCodigoAndVigenteTrue(String codigo);

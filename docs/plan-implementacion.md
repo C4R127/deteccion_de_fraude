@@ -344,11 +344,11 @@ evaluación del mismo `transaccionId` devuelve la guardada. Timer Micrometer
   `EvaluacionConsultaController`
 - Prueba: `BloqueoPorCasoIT`, `ReglasApiIT`
 
-- [ ] Pruebas: `FRAUDE_CONFIRMADO` bloquea tarjeta y dispositivo; `FALSO_POSITIVO` no
+- [x] Pruebas: `FRAUDE_CONFIRMADO` bloquea tarjeta y dispositivo; `FALSO_POSITIVO` no
       bloquea; el mismo evento dos veces deja un solo bloqueo; editar una regla por API
       crea versión nueva; AUDITOR no puede editar (403).
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(scoring): bloqueo por casos y api de reglas`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(scoring): bloqueo por casos y api de reglas`.
 
 ### Tarea 4.6: Escenarios de fraude y prueba de carga
 

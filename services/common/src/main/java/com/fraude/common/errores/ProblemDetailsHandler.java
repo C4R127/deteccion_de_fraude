@@ -46,6 +46,13 @@ public class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
         return problema;
     }
 
+    @ExceptionHandler(SolicitudInvalidaException.class)
+    public ProblemDetail solicitudInvalida(SolicitudInvalidaException ex) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problema.setTitle("Validación fallida");
+        return problema;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail inesperado(Exception ex) {
         log.error("Error no controlado", ex);

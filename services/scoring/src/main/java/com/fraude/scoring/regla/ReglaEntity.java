@@ -113,4 +113,12 @@ public class ReglaEntity {
     public boolean isVigente() {
         return vigente;
     }
+
+    public Instant getCreadaEn() {
+        return creadaEn;
+    }
+
+    public String getCreadaPor() {
+        return creadaPor;
+    }
 }

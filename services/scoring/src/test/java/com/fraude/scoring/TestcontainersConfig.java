@@ -38,4 +38,14 @@ public class TestcontainersConfig {
     NewTopic decisionesSospechosas() {
         return new NewTopic(Topicos.DECISIONES_SOSPECHOSAS, 6, (short) 1);
     }
+
+    @Bean
+    NewTopic casosEventos() {
+        return new NewTopic(Topicos.CASOS_EVENTOS, 3, (short) 1);
+    }
+
+    @Bean
+    NewTopic casosEventosDlt() {
+        return new NewTopic(Topicos.CASOS_EVENTOS + ".dlt", 3, (short) 1);
+    }
 }
