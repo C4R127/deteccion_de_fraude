@@ -6,6 +6,8 @@ import { PaginaCasos } from '@/casos/PaginaCasos';
 import { PaginaDetalleCaso } from '@/casos/PaginaDetalleCaso';
 import { Layout } from '@/layout/Layout';
 import { Pagina, Pendiente } from '@/paginas/Pagina';
+import { PaginaListasBloqueo } from '@/reglas/PaginaListasBloqueo';
+import { PaginaReglas } from '@/reglas/PaginaReglas';
 
 /** Muestra la página solo si la sesión tiene el permiso; si no, un aviso (la API también lo rechaza). */
 function RequierePermiso({ permiso, children }: { permiso: Permiso; children: ReactNode }) {
@@ -48,7 +50,7 @@ export function RutasApp() {
           path="/reglas"
           element={
             <RequierePermiso permiso="gestionarReglas">
-              <Pendiente titulo="Reglas" tarea="Tarea 5.5" />
+              <PaginaReglas />
             </RequierePermiso>
           }
         />
@@ -56,7 +58,7 @@ export function RutasApp() {
           path="/listas-bloqueo"
           element={
             <RequierePermiso permiso="gestionarListas">
-              <Pendiente titulo="Listas de bloqueo" tarea="Tarea 5.5" />
+              <PaginaListasBloqueo />
             </RequierePermiso>
           }
         />

@@ -442,10 +442,11 @@ AUDITOR (§10).
 **Archivos:**
 - Crear: páginas `Reglas` y `ListasBloqueo` con React Hook Form + Zod
 
-- [ ] Pruebas: el formulario valida parámetros numéricos positivos; guardar muestra la
-      nueva versión.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(frontend): editor de reglas y listas de bloqueo`.
+- [x] Pruebas: el formulario valida parámetros numéricos positivos; guardar muestra la
+      nueva versión. (Las horas de R07 admiten 0; las listas como R06 se editan separadas
+      por comas.)
+- [x] Implementar y verificar.
+- [x] Commit `feat(frontend): editor de reglas y listas de bloqueo`.
 
 ---
 
