@@ -1,0 +1,17 @@
+package com.fraude.scoring.regla;
+
+import jakarta.persistence.LockModeType;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+
+public interface ReglaRepository extends JpaRepository<ReglaEntity, UUID> {
+
+    List<ReglaEntity> findByVigenteTrueOrderByCodigo();
+
+    /** Bloquea la fila vigente para que dos ediciones simultáneas no creen la misma versión. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<ReglaEntity> findByCodigoAndVigenteTrue(String codigo);
+}

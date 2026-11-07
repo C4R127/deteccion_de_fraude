@@ -272,11 +272,11 @@ horas se cuentan en `America/Lima`.
   reglas vigentes, se recarga al editar)
 - Prueba: `CatalogoReglasIT`
 
-- [ ] Pruebas: editar una regla crea versión 2 y deja una sola vigente; el catálogo
+- [x] Pruebas: editar una regla crea versión 2 y deja una sola vigente; el catálogo
       devuelve la versión nueva tras editar; los parámetros jsonb se leen como mapa
       tipado.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(scoring): reglas versionadas`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(scoring): reglas versionadas`.
 
 ### Tarea 4.2: Lectura de perfiles
 
