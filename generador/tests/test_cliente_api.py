@@ -181,3 +181,19 @@ def test_comando_vivo_envia_a_la_tasa_indicada_con_fecha_actual():
     for llamada in ruta.calls:
         fecha = datetime.fromisoformat(json.loads(llamada.request.content)["fecha"])
         assert inicio - timedelta(seconds=1) <= fecha <= datetime.now(timezone.utc)
+
+
+@respx.mock
+def test_las_repetidas_se_cuentan_aparte_y_no_como_decisiones():
+    respx.post(URL_TOKEN).mock(return_value=_token())
+    respx.post(URL_TX).mock(side_effect=[
+        _respuesta_ok(None),
+        httpx.Response(200, json={"transaccionId": "x", "decision": "APROBAR", "score": 0, "respaldo": False}),
+    ])
+
+    resumen = asyncio.run(_enviar(_transacciones(2), concurrencia=1))
+
+    assert resumen.enviadas == 2
+    assert resumen.repetidas == 1
+    assert resumen.decisiones["APROBAR"] == 1
+    assert "repetidas=1" in resumen.texto()

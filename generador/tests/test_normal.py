@@ -174,3 +174,42 @@ def test_cli_seco_imprime_jsonl_sin_llamar_a_la_api(capsys):
     assert codigo == 0
     assert len(lineas) > 0
     assert all(set(json.loads(linea)) == CAMPOS_SECCION_11 for linea in lineas)
+
+
+def test_ids_reproducibles_para_la_misma_semilla_modo_e_inicio():
+    from generador.ids import GeneradorIds
+
+    a = GeneradorIds(42, "historia", DESDE)
+    b = GeneradorIds(42, "historia", DESDE)
+
+    assert [a.siguiente() for _ in range(5)] == [b.siguiente() for _ in range(5)]
+
+
+def test_ids_distintos_entre_corridas_con_otro_inicio_o_modo():
+    from generador.ids import GeneradorIds
+
+    def ids(modo, inicio):
+        g = GeneradorIds(42, modo, inicio)
+        return {g.siguiente() for _ in range(2000)}
+
+    historia_1 = ids("historia", DESDE)
+    historia_30 = ids("historia", DESDE - timedelta(days=29))
+    vivo = ids("vivo", DESDE)
+    assert historia_1.isdisjoint(historia_30)
+    assert historia_1.isdisjoint(vivo)
+
+
+def test_dos_ventanas_distintas_no_repiten_id_externo():
+    from generador.ids import GeneradorIds
+
+    def corrida(desde):
+        config = _config()
+        rng = np.random.default_rng(config.semilla)
+        poblacion = crear_poblacion(config, rng)
+        ids = GeneradorIds(config.semilla, "historia", desde)
+        return {t.idExterno for t in generar_normal(poblacion, desde, HASTA, rng, ids)}
+
+    corta = corrida(HASTA - timedelta(days=1))
+    larga = corrida(DESDE)
+    assert corta and larga
+    assert corta.isdisjoint(larga)

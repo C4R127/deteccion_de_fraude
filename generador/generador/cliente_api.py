@@ -72,12 +72,14 @@ class Resumen:
     errores: int = 0
     reintentos: int = 0
     respaldo: int = 0
+    # Respuestas 200: el idExterno ya existía y la API devolvió la respuesta original.
+    repetidas: int = 0
     decisiones: Counter = field(default_factory=Counter)
 
     def texto(self) -> str:
         decisiones = ", ".join(f"{k}={v}" for k, v in sorted(self.decisiones.items()))
         return (f"enviadas={self.enviadas} errores={self.errores} reintentos={self.reintentos} "
-                f"respaldo={self.respaldo} {decisiones}").strip()
+                f"respaldo={self.respaldo} repetidas={self.repetidas} {decisiones}").strip()
 
 
 async def enviar_una(tx: TransaccionSalida, url_gateway: str, http: httpx.AsyncClient,
@@ -103,7 +105,9 @@ async def enviar_una(tx: TransaccionSalida, url_gateway: str, http: httpx.AsyncC
             await proveedor.token(renovar=True)
             continue
         resumen.enviadas += 1
-        if respuesta.status_code in (200, 201):
+        if respuesta.status_code == 200:
+            resumen.repetidas += 1
+        elif respuesta.status_code == 201:
             datos = respuesta.json()
             resumen.decisiones[datos["decision"]] += 1
             resumen.respaldo += 1 if datos.get("respaldo") else 0

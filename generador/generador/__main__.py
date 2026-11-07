@@ -19,6 +19,7 @@ import numpy as np
 from generador.cliente_api import ProveedorToken, Resumen, enviar_transacciones, enviar_una
 from generador.clientes import crear_poblacion
 from generador.config import Config, cargar_config
+from generador.ids import GeneradorIds
 from generador.modelos import Poblacion
 from generador.normal import GeneradorVivo, generar_normal
 from generador.siembra import enviar_siembra
@@ -73,7 +74,8 @@ async def _historia(config: Config, poblacion: Poblacion, rng: np.random.Generat
     hasta = datetime.now(timezone.utc).replace(microsecond=0)
     desde = hasta - timedelta(days=dias)
     async with httpx.AsyncClient(timeout=TIEMPO_LIMITE_HTTP) as http:
-        resumen = await enviar_transacciones(generar_normal(poblacion, desde, hasta, rng),
+        ids = GeneradorIds(config.semilla, "historia", desde)
+        resumen = await enviar_transacciones(generar_normal(poblacion, desde, hasta, rng, ids),
                                              config.url_gateway, http, ProveedorToken(config.oauth, http),
                                              concurrencia=concurrencia)
     print(f"historia completa: {resumen.texto()}")
@@ -82,7 +84,7 @@ async def _historia(config: Config, poblacion: Poblacion, rng: np.random.Generat
 
 async def _vivo(config: Config, poblacion: Poblacion, rng: np.random.Generator, tps: float,
                 duracion: float | None) -> int:
-    generador = GeneradorVivo(poblacion, rng)
+    generador = GeneradorVivo(poblacion, rng, GeneradorIds(config.semilla, "vivo", datetime.now(timezone.utc)))
     resumen = Resumen()
     intervalo = 1.0 / tps
     inicio = time.monotonic()

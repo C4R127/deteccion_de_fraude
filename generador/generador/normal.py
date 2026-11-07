@@ -9,6 +9,7 @@ import numpy as np
 
 from generador.clientes import uuid_determinista
 from generador.comercios import MCC_CAJERO, MCC_ONLINE
+from generador.ids import GeneradorIds
 from generador.modelos import Cliente, Comercio, Poblacion, Tarjeta, TransaccionSalida
 
 LIMA = ZoneInfo("America/Lima")
@@ -38,8 +39,11 @@ class _Indice:
 
 
 def generar_normal(poblacion: Poblacion, desde: datetime, hasta: datetime,
-                   rng: np.random.Generator) -> Iterator[TransaccionSalida]:
-    """Genera transacciones en ``[desde, hasta)`` ordenadas por fecha, día por día."""
+                   rng: np.random.Generator, ids: GeneradorIds | None = None) -> Iterator[TransaccionSalida]:
+    """Genera transacciones en ``[desde, hasta)`` ordenadas por fecha, día por día.
+
+    ``ids`` da los ``idExterno``; sin él salen de ``rng`` (solo para pruebas y ``seco``).
+    """
     indice = _Indice(poblacion.comercios)
     tarjeta_de = {t.cliente_id: t for t in poblacion.tarjetas}
     dia = desde.astimezone(LIMA).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -47,7 +51,7 @@ def generar_normal(poblacion: Poblacion, desde: datetime, hasta: datetime,
         del_dia: list[TransaccionSalida] = []
         for cliente in poblacion.clientes:
             for _ in range(int(rng.poisson(cliente.transacciones_por_dia))):
-                tx = _transaccion(cliente, tarjeta_de[cliente.id], dia, indice, rng)
+                tx = _transaccion(cliente, tarjeta_de[cliente.id], dia, indice, rng, ids=ids)
                 if desde <= tx.fecha < hasta:
                     del_dia.append(tx)
         del_dia.sort(key=lambda t: (t.fecha, str(t.idExterno)))
@@ -58,9 +62,10 @@ def generar_normal(poblacion: Poblacion, desde: datetime, hasta: datetime,
 class GeneradorVivo:
     """Transacciones normales con la fecha que se indique (modo ``vivo``)."""
 
-    def __init__(self, poblacion: Poblacion, rng: np.random.Generator):
+    def __init__(self, poblacion: Poblacion, rng: np.random.Generator, ids: GeneradorIds | None = None):
         self._poblacion = poblacion
         self._rng = rng
+        self._ids = ids
         self._indice = _Indice(poblacion.comercios)
         self._tarjeta_de = {t.cliente_id: t for t in poblacion.tarjetas}
         pesos = np.array([c.transacciones_por_dia for c in poblacion.clientes])
@@ -70,11 +75,12 @@ class GeneradorVivo:
         """Una transacción de un cliente elegido según su frecuencia de compra."""
         cliente = self._poblacion.clientes[int(self._rng.choice(len(self._poblacion.clientes), p=self._pesos))]
         return _transaccion(cliente, self._tarjeta_de[cliente.id], None, self._indice, self._rng,
-                            fecha=fecha.astimezone(timezone.utc).replace(microsecond=0))
+                            fecha=fecha.astimezone(timezone.utc).replace(microsecond=0), ids=self._ids)
 
 
 def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime | None, indice: _Indice,
-                 rng: np.random.Generator, fecha: datetime | None = None) -> TransaccionSalida:
+                 rng: np.random.Generator, fecha: datetime | None = None,
+                 ids: GeneradorIds | None = None) -> TransaccionSalida:
     """Si ``fecha`` es nula, la hora se elige entre las habituales del cliente en ``dia_lima``."""
     canales = [c for c, _ in cliente.canales_habituales]
     pesos = np.array([p for _, p in cliente.canales_habituales])
@@ -104,7 +110,7 @@ def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime | None, 
                                  second=int(rng.integers(0, 60)))
         fecha = local.astimezone(timezone.utc)
     return TransaccionSalida(
-        idExterno=uuid_determinista(rng),
+        idExterno=ids.siguiente() if ids is not None else uuid_determinista(rng),
         tarjetaToken=tarjeta.token,
         comercioId=comercio.id,
         dispositivoHuella=dispositivo,
