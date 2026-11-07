@@ -79,6 +79,9 @@ decisión es REVISAR o RECHAZAR.
 **comercio**: `id text pk` (ej. COM-00421), `nombre text`, `mcc char(4)`, `pais char(2)`,
 `ciudad text`, `latitud numeric(9,6) null`, `longitud numeric(9,6) null`, `online boolean`.
 
+**dispositivo**: `huella text pk`, `cliente_id uuid fk`, `creado_en timestamptz`
+(ver `docs/adr/0005-tabla-dispositivo.md`).
+
 **transaccion**: `id uuid pk`, `id_externo uuid unique`, `tarjeta_id uuid fk`,
 `cliente_id uuid fk`, `comercio_id text fk`, `dispositivo_huella text null`,
 `monto numeric(15,2)`, `moneda char(3)`, `canal text` (POS, ECOMMERCE, ATM),
