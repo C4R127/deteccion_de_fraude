@@ -139,6 +139,7 @@ todas las transacciones, también las RECHAZADAS: los intentos fallidos de un
 defraudador cuentan para detectar ráfagas. `dispositivos` solo agrega huellas de
 transacciones APROBAR, para que el dispositivo de un intento sospechoso no pase a
 ser "conocido".
+`n30d`, `paises`, `mccs` y `horas` usan la misma muestra que `promedio30d` (ADR 0009).
 
 ### 5.5 Tópicos de Kafka
 
