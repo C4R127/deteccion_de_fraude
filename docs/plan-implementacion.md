@@ -125,12 +125,12 @@ una tiene su prueba en la tarea indicada:
   `TransaccionSalida` tiene exactamente los campos del cuerpo de §11.
 - CLI `python -m generador seco --dias 1` que imprime JSONL sin llamar a la API.
 
-- [ ] Pruebas: misma semilla → misma salida; `monto > 0` con 2 decimales; ECOMMERCE sin
+- [x] Pruebas: misma semilla → misma salida; `monto > 0` con 2 decimales; ECOMMERCE sin
       coordenadas y POS/ATM con coordenadas; la mayoría de transacciones POS de un
       cliente ocurren en su ciudad de residencia; los tokens no parecen números de
       tarjeta (prefijo `tok_`).
-- [ ] Implementar y verificar: `pytest` → PASS.
-- [ ] Commit `feat(generador): poblacion y transacciones normales`.
+- [x] Implementar y verificar: `pytest` → PASS.
+- [x] Commit `feat(generador): poblacion y transacciones normales`.
 
 **Cierre de fase 1:** `./mvnw clean verify`, `pytest` y `docker compose up` sin errores.
 

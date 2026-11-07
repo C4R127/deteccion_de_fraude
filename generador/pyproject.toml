@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "generador"
+version = "0.1.0"
+description = "Generador de clientes y transacciones bancarias ficticias con escenarios de fraude"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx==0.28.1",
+    "faker==40.44.0",
+    "numpy==2.5.4",
+    "pydantic==2.14.3",
+    "pyyaml==6.0.3",
+    "tzdata==2026.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.2.0",
+    "respx==0.23.1",
+]
+
+[tool.setuptools]
+packages = ["generador"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

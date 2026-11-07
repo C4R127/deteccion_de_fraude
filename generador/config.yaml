@@ -1,0 +1,22 @@
+# Configuración del generador (especificación §6.4).
+# El secreto del cliente OAuth NO va aquí: se lee de GENERADOR_CLIENT_SECRET (.env).
+
+clientes: 500
+distribucion_segmentos:
+  ESTANDAR: 0.60
+  PREMIUM: 0.15
+  JOVEN: 0.25
+tps: 20
+proporcion_fraude: 0.02
+pesos_escenarios:
+  TARJETA_CLONADA: 1.0
+  CARD_TESTING: 1.0
+  TOMA_DE_CUENTA: 1.0
+  COMPRA_ATIPICA: 1.0
+  USO_NOCTURNO: 1.0
+semilla: 42
+url_gateway: http://localhost:8080
+oauth:
+  url_token: http://localhost:8180/realms/fraude/protocol/openid-connect/token
+  client_id: generador
+  variable_secreto: GENERADOR_CLIENT_SECRET
