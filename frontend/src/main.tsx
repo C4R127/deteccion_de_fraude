@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { iniciarSesion } from '@/auth/keycloak';
 import { SesionContext } from '@/auth/sesion';
+import { CasosEnVivoContext, suscriptorStomp } from '@/casos/envivo';
 import { RutasApp } from '@/rutas';
 import './index.css';
 
@@ -18,11 +19,13 @@ iniciarSesion()
     raiz.render(
       <StrictMode>
         <SesionContext.Provider value={sesion}>
-          <QueryClientProvider client={consultas}>
-            <BrowserRouter>
-              <RutasApp />
-            </BrowserRouter>
-          </QueryClientProvider>
+          <CasosEnVivoContext.Provider value={suscriptorStomp(sesion)}>
+            <QueryClientProvider client={consultas}>
+              <BrowserRouter>
+                <RutasApp />
+              </BrowserRouter>
+            </QueryClientProvider>
+          </CasosEnVivoContext.Provider>
         </SesionContext.Provider>
       </StrictMode>,
     );

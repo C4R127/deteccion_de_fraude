@@ -78,6 +78,58 @@ class ClienteApiIT {
         assertThat(obtener(CLIENTE, TokensDePrueba.SISTEMA).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    private void transaccion(String fecha, String monto, String decision, Integer score) {
+        jdbc.update("""
+                INSERT INTO transaccion (id, id_externo, tarjeta_id, cliente_id, comercio_id, monto, moneda, canal,
+                                         pais, latitud, longitud, fecha, decision, score, respaldo)
+                VALUES (gen_random_uuid(), gen_random_uuid(), '6f1c2d3e-0000-4000-8000-0000000000a1'::uuid, ?::uuid,
+                        'COM-00421', ?::numeric, 'PEN', 'POS', 'PE', -12.093100, -77.046500, ?::timestamptz, ?, ?, false)
+                """, CLIENTE, monto, fecha, decision, score);
+    }
+
+    @Test
+    void ultimas_transacciones_del_cliente_de_la_mas_reciente_a_la_mas_antigua() throws Exception {
+        jdbc.update("INSERT INTO tarjeta VALUES ('6f1c2d3e-0000-4000-8000-0000000000a1'::uuid, ?::uuid, "
+                + "'tok_8c1f42a9', '4821', 'ACTIVA', now())", CLIENTE);
+        jdbc.update("INSERT INTO comercio VALUES ('COM-00421', 'Supermercado Lima 1', '5411', 'PE', 'Lima', "
+                + "-12.093100, -77.046500, false)");
+        for (int i = 1; i <= 25; i++) {
+            transaccion("2026-10-%02dT15:00:00Z".formatted(i), i + ".50", i == 25 ? "REVISAR" : "APROBAR", i == 25 ? 55 : 0);
+        }
+
+        var r = http.exchange("/api/v1/clientes/" + CLIENTE + "/transacciones?limite=20", HttpMethod.GET,
+                new HttpEntity<>(TokensDePrueba.cabeceras(TokensDePrueba.AUDITOR)), String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode lista = json(r);
+        assertThat(lista).hasSize(20);
+        JsonNode primera = lista.get(0);
+        assertThat(primera.get("fecha").asText()).isEqualTo("2026-10-25T15:00:00Z");
+        assertThat(primera.get("monto").decimalValue()).isEqualByComparingTo("25.50");
+        assertThat(primera.get("decision").asText()).isEqualTo("REVISAR");
+        assertThat(primera.get("score").asInt()).isEqualTo(55);
+        assertThat(primera.get("ultimos4").asText()).isEqualTo("4821");
+        assertThat(primera.get("comercioNombre").asText()).isEqualTo("Supermercado Lima 1");
+        assertThat(primera.get("ciudad").asText()).isEqualTo("Lima");
+        assertThat(primera.get("latitud").decimalValue()).isEqualByComparingTo("-12.0931");
+        assertThat(primera.has("tarjetaToken")).isFalse();
+        assertThat(lista.get(19).get("fecha").asText()).isEqualTo("2026-10-06T15:00:00Z");
+
+        var porDefecto = http.exchange("/api/v1/clientes/" + CLIENTE + "/transacciones", HttpMethod.GET,
+                new HttpEntity<>(TokensDePrueba.cabeceras(TokensDePrueba.ANALISTA)), String.class);
+        assertThat(json(porDefecto)).hasSize(20);
+        var fueraDeRango = http.exchange("/api/v1/clientes/" + CLIENTE + "/transacciones?limite=500", HttpMethod.GET,
+                new HttpEntity<>(TokensDePrueba.cabeceras(TokensDePrueba.ANALISTA)), String.class);
+        assertThat(fueraDeRango.getStatusCode().is4xxClientError()).isTrue();
+    }
+
+    @Test
+    void transacciones_de_un_cliente_inexistente_responde_404() {
+        var r = http.exchange("/api/v1/clientes/" + UUID.randomUUID() + "/transacciones", HttpMethod.GET,
+                new HttpEntity<>(TokensDePrueba.cabeceras(TokensDePrueba.ANALISTA)), String.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     @Test
     void cliente_inexistente_responde_404() {
         assertThat(obtener(UUID.randomUUID().toString(), TokensDePrueba.ANALISTA).getStatusCode())

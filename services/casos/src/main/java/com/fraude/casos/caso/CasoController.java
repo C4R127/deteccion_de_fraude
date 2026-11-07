@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 /** Bandeja, detalle y transiciones de casos (§8, §11). */
 @RestController
 @RequestMapping("/api/v1/casos")
-@Validated
 public class CasoController {
 
     private final CasoService casos;

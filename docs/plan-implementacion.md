@@ -429,10 +429,13 @@ AUDITOR (§10).
   `DetalleCaso` (reglas disparadas, línea de tiempo de transacciones, mapa Leaflet,
   perfil, notas, historial, botones de acción según estado y rol)
 
-- [ ] Pruebas (Vitest + Testing Library): un caso recibido por STOMP aparece en la
+- [x] Pruebas (Vitest + Testing Library): un caso recibido por STOMP aparece en la
       tabla; los botones visibles dependen del estado; cerrar exige resolución.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(frontend): bandeja y detalle de casos`.
+- [x] Implementar y verificar. (Se agregó `GET /api/v1/clientes/{id}/transacciones` de §11
+      en transacciones, que ninguna tarea anterior había construido. Verificado en el
+      navegador con Keycloak: caso en vivo por STOMP, ciclo completo hasta el bloqueo por
+      caso en scoring y nombre enmascarado para AUDITOR.)
+- [x] Commit `feat(frontend): bandeja y detalle de casos`.
 
 ### Tarea 5.5: Editor de reglas y listas de bloqueo
 

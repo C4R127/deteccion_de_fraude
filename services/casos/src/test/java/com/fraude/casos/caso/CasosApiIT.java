@@ -344,6 +344,8 @@ class CasosApiIT {
         JsonNode pagina = json(llamar(HttpMethod.GET, "/api/v1/casos?pagina=1&tamano=3", TokensDePrueba.AUDITOR, null));
         assertThat(pagina.get("contenido")).extracting(c -> c.get("id").asText()).containsExactly(mediaNueva.toString());
         assertThat(pagina.get("total").asInt()).isEqualTo(4);
+        assertThat(llamar(HttpMethod.GET, "/api/v1/casos?tamano=500", TokensDePrueba.AUDITOR, null).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

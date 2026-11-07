@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { puede, type Permiso } from '@/auth/permisos';
 import { useSesion } from '@/auth/sesion';
+import { PaginaCasos } from '@/casos/PaginaCasos';
+import { PaginaDetalleCaso } from '@/casos/PaginaDetalleCaso';
 import { Layout } from '@/layout/Layout';
 import { Pagina, Pendiente } from '@/paginas/Pagina';
 
@@ -40,8 +42,8 @@ export function RutasApp() {
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Pendiente titulo="Dashboard" tarea="Fase 6" />} />
-        <Route path="/casos" element={<Pendiente titulo="Casos" tarea="Tarea 5.4" />} />
-        <Route path="/casos/:id" element={<Pendiente titulo="Detalle del caso" tarea="Tarea 5.4" />} />
+        <Route path="/casos" element={<PaginaCasos />} />
+        <Route path="/casos/:id" element={<PaginaDetalleCaso />} />
         <Route
           path="/reglas"
           element={
