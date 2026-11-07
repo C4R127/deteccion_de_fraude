@@ -87,12 +87,12 @@ una tiene su prueba en la tarea indicada:
 - Tópicos de §5.5 con sus particiones.
 - Healthchecks en todos los contenedores.
 
-- [ ] Escribir los archivos.
-- [ ] Verificar: `docker compose -f infra/docker-compose.yml up -d` y todos `healthy`.
-- [ ] Verificar: el script lista los 3 tópicos con sus particiones.
-- [ ] Verificar: `curl` de token con client credentials de `generador` devuelve
+- [x] Escribir los archivos.
+- [x] Verificar: `docker compose -f infra/docker-compose.yml up -d` y todos `healthy`.
+- [x] Verificar: el script lista los 3 tópicos con sus particiones.
+- [x] Verificar: `curl` de token con client credentials de `generador` devuelve
       `access_token`.
-- [ ] Commit `chore(infra): docker compose con kafka, postgres, valkey y keycloak`.
+- [x] Commit `chore(infra): docker compose con kafka, postgres, valkey y keycloak`.
 
 ### Tarea 1.3: Módulo común
 

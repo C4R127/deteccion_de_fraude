@@ -13,6 +13,20 @@ analistas. Todos los datos son ficticios.
 - Docker (para la infraestructura y Testcontainers).
 - Python 3.12 (generador) y Node.js (frontend).
 
+## Infraestructura local
+
+```bash
+cp .env.example .env        # ajusta las contraseñas si quieres
+docker compose -f infra/docker-compose.yml up -d
+docker compose -f infra/docker-compose.yml down -v   # borra datos
+```
+
+Levanta Kafka (KRaft, `localhost:9092`), Kafka UI (http://localhost:8090), PostgreSQL 16
+(`localhost:5432`, un esquema y un usuario por servicio), Valkey (`localhost:6379`) y
+Keycloak (http://localhost:8180, realm `fraude`). Los tópicos se crean solos con el
+servicio `kafka-topicos`. Todos los secretos salen de `.env`: el realm de Keycloak usa
+marcadores `${VAR}` y PostgreSQL los lee en `infra/postgres/init.sh`.
+
 ## Build
 
 ```bash

@@ -1,0 +1,208 @@
+{
+  "realm": "fraude",
+  "enabled": true,
+  "displayName": "Detección de fraude",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 900,
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN",
+        "description": "Administrador"
+      },
+      {
+        "name": "SUPERVISOR",
+        "description": "Supervisor de fraude"
+      },
+      {
+        "name": "ANALISTA",
+        "description": "Analista de fraude"
+      },
+      {
+        "name": "AUDITOR",
+        "description": "Auditor (solo lectura, datos enmascarados)"
+      },
+      {
+        "name": "SISTEMA",
+        "description": "Procesos automáticos (generador)"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "frontend",
+      "name": "Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audiencia-servicios",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "servicios",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "generador",
+      "name": "Generador de transacciones",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${GENERADOR_CLIENT_SECRET}",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audiencia-servicios",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "servicios",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "servicios",
+      "name": "Audiencia de los servicios backend",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ada",
+      "lastName": "Admin",
+      "email": "admin@fraude.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${USUARIO_ADMIN_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ]
+    },
+    {
+      "username": "supervisor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sara",
+      "lastName": "Supervisora",
+      "email": "supervisor@fraude.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${USUARIO_SUPERVISOR_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "SUPERVISOR"
+      ]
+    },
+    {
+      "username": "analista1",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ana",
+      "lastName": "Analista",
+      "email": "analista1@fraude.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${USUARIO_ANALISTA1_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ANALISTA"
+      ]
+    },
+    {
+      "username": "analista2",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Andrés",
+      "lastName": "Analista",
+      "email": "analista2@fraude.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${USUARIO_ANALISTA2_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ANALISTA"
+      ]
+    },
+    {
+      "username": "auditor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Aurelio",
+      "lastName": "Auditor",
+      "email": "auditor@fraude.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${USUARIO_AUDITOR_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "AUDITOR"
+      ]
+    },
+    {
+      "username": "service-account-generador",
+      "enabled": true,
+      "serviceAccountClientId": "generador",
+      "realmRoles": [
+        "SISTEMA"
+      ]
+    }
+  ]
+}
