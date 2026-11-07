@@ -106,10 +106,10 @@ una tiene su prueba en la tarea indicada:
 `CasoCerradoEvento`, `ReglaDisparada`, `Decision`, `Canal`, `Resolucion`,
 `Topicos.TRANSACCIONES_CREADAS`, `Topicos.DECISIONES_SOSPECHOSAS`, `Topicos.CASOS_EVENTOS`.
 
-- [ ] Prueba: cada evento serializa y deserializa sin pérdida; `monto` `189.90` se
+- [x] Prueba: cada evento serializa y deserializa sin pérdida; `monto` `189.90` se
       conserva con escala 2; `fecha` se serializa como `"2026-11-06T14:30:12Z"`.
-- [ ] Implementar y verificar: `./mvnw -pl services/common test` → PASS.
-- [ ] Commit `feat(common): eventos y manejo de errores compartido`.
+- [x] Implementar y verificar: `./mvnw -pl services/common test` → PASS.
+- [x] Commit `feat(common): eventos y manejo de errores compartido`.
 
 ### Tarea 1.4: Generador base
 
