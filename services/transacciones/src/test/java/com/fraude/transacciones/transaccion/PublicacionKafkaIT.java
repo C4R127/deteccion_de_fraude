@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fraude.common.eventos.Topicos;
 import com.fraude.common.eventos.TransaccionCreadaEvento;
 import com.fraude.transacciones.TestcontainersConfig;
+import com.fraude.transacciones.TokensDePrueba;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.time.Duration;
@@ -44,7 +45,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.kafka.KafkaContainer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({TestcontainersConfig.class, PublicacionKafkaIT.FalloDespuesDePublicar.class})
+@Import({TestcontainersConfig.class, TokensDePrueba.class, PublicacionKafkaIT.FalloDespuesDePublicar.class})
 class PublicacionKafkaIT {
 
     private static final String CLIENTE = "6f1c2d3e-0000-4000-8000-000000000001";
@@ -106,7 +107,7 @@ class PublicacionKafkaIT {
                  "pais": "PE", "latitud": -12.0931, "longitud": -77.0465,
                  "fecha": "2026-11-06T14:30:12Z"}
                 """.formatted(idExterno, token);
-        HttpHeaders cabeceras = new HttpHeaders();
+        HttpHeaders cabeceras = TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA);
         cabeceras.setContentType(MediaType.APPLICATION_JSON);
         return http.postForEntity("/api/v1/transacciones", new HttpEntity<>(cuerpo, cabeceras), String.class);
     }

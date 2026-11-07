@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fraude.transacciones.TestcontainersConfig;
+import com.fraude.transacciones.TokensDePrueba;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.Fault;
@@ -43,7 +44,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfig.class)
+@Import({TestcontainersConfig.class, TokensDePrueba.class})
 class TransaccionApiIT {
 
     private static final String RUTA = "/api/v1/transacciones";
@@ -143,7 +144,7 @@ class TransaccionApiIT {
     }
 
     private ResponseEntity<String> enviar(String cuerpo) {
-        HttpHeaders cabeceras = new HttpHeaders();
+        HttpHeaders cabeceras = TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA);
         cabeceras.setContentType(MediaType.APPLICATION_JSON);
         return http.postForEntity(RUTA, new HttpEntity<>(cuerpo, cabeceras), String.class);
     }
@@ -363,5 +364,27 @@ class TransaccionApiIT {
         assertThat(json.get("respaldo").asBoolean()).isFalse();
         assertThat(jdbc.queryForObject("SELECT decision FROM transaccion", String.class)).isEqualTo("RECHAZAR");
         scoring.verify(0, evaluacionDe(idExterno));
+    }
+
+    private ResponseEntity<String> enviarCon(HttpHeaders cabeceras, String cuerpo) {
+        cabeceras.setContentType(MediaType.APPLICATION_JSON);
+        return http.postForEntity(RUTA, new HttpEntity<>(cuerpo, cabeceras), String.class);
+    }
+
+    @Test
+    void sin_token_devuelve_401() {
+        var respuesta = enviarCon(new HttpHeaders(), cuerpoPos(UUID.randomUUID().toString()));
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(filas()).isZero();
+    }
+
+    @Test
+    void rol_analista_no_puede_crear_transacciones() {
+        var respuesta = enviarCon(TokensDePrueba.cabeceras(TokensDePrueba.ANALISTA),
+                cuerpoPos(UUID.randomUUID().toString()));
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(filas()).isZero();
     }
 }

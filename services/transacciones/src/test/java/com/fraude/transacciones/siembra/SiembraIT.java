@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fraude.transacciones.TestcontainersConfig;
+import com.fraude.transacciones.TokensDePrueba;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfig.class)
+@Import({TestcontainersConfig.class, TokensDePrueba.class})
 class SiembraIT {
 
     private static final String CLIENTE = "6f1c2d3e-0000-4000-8000-000000000001";
@@ -59,7 +60,7 @@ class SiembraIT {
 
     @Test
     void siembra_crea_los_datos_maestros() throws Exception {
-        mvc.perform(post("/internal/v1/siembra").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/internal/v1/siembra").headers(TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA)).contentType(MediaType.APPLICATION_JSON)
                         .content(siembra("Juan Perez")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientes").value(1))
@@ -77,9 +78,9 @@ class SiembraIT {
 
     @Test
     void enviar_la_siembra_dos_veces_no_duplica_y_actualiza() throws Exception {
-        mvc.perform(post("/internal/v1/siembra").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/internal/v1/siembra").headers(TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA)).contentType(MediaType.APPLICATION_JSON)
                 .content(siembra("Juan Perez"))).andExpect(status().isOk());
-        mvc.perform(post("/internal/v1/siembra").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/internal/v1/siembra").headers(TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA)).contentType(MediaType.APPLICATION_JSON)
                 .content(siembra("Juan Perez Actualizado"))).andExpect(status().isOk());
 
         assertThat(contar("cliente")).isEqualTo(1);
@@ -94,7 +95,7 @@ class SiembraIT {
     void rechaza_un_numero_de_tarjeta_en_lugar_de_token() throws Exception {
         String cuerpo = siembra("Juan Perez").replace("tok_8c1f42a9", "4111111111111111");
 
-        mvc.perform(post("/internal/v1/siembra").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/internal/v1/siembra").headers(TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA)).contentType(MediaType.APPLICATION_JSON)
                         .content(cuerpo))
                 .andExpect(status().isUnprocessableEntity());
 
@@ -105,8 +106,26 @@ class SiembraIT {
     void rechaza_ultimos4_que_no_son_cuatro_digitos() throws Exception {
         String cuerpo = siembra("Juan Perez").replace("\"4821\"", "\"48210\"");
 
-        mvc.perform(post("/internal/v1/siembra").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/internal/v1/siembra").headers(TokensDePrueba.cabeceras(TokensDePrueba.SISTEMA)).contentType(MediaType.APPLICATION_JSON)
                         .content(cuerpo))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void sin_token_devuelve_401() throws Exception {
+        mvc.perform(post("/internal/v1/siembra").contentType(MediaType.APPLICATION_JSON)
+                        .content(siembra("Juan Perez")))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(contar("cliente")).isZero();
+    }
+
+    @Test
+    void rol_distinto_de_sistema_devuelve_403() throws Exception {
+        mvc.perform(post("/internal/v1/siembra").headers(TokensDePrueba.cabeceras(TokensDePrueba.ANALISTA))
+                        .contentType(MediaType.APPLICATION_JSON).content(siembra("Juan Perez")))
+                .andExpect(status().isForbidden());
+
+        assertThat(contar("cliente")).isZero();
     }
 }

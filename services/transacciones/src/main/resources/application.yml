@@ -15,6 +15,12 @@ spring:
     password: ${TRANSACCIONES_DB_PASSWORD}
     hikari:
       schema: transacciones
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/fraude
+          audiences: servicios
   kafka:
     bootstrap-servers: localhost:9092
     producer:
