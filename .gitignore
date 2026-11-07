@@ -1,0 +1,32 @@
+# Secretos
+.env
+
+# Java / Maven
+target/
+*.class
+*.log
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+generador/verdad.jsonl
+
+# Frontend
+node_modules/
+dist/
+
+# SO
+.DS_Store
+Thumbs.db

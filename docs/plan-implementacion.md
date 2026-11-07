@@ -63,12 +63,12 @@ una tiene su prueba en la tarea indicada:
   `CLAUDE.md`
 - Prueba: `*ApplicationTests` (carga de contexto) en cada servicio
 
-- [ ] Prueba de carga de contexto en cada servicio (falla: no existe la aplicación).
-- [ ] Crear el pom padre con `dependencyManagement` (Spring Boot BOM, Spring Cloud BOM,
+- [x] Prueba de carga de contexto en cada servicio (falla: no existe la aplicación).
+- [x] Crear el pom padre con `dependencyManagement` (Spring Boot BOM, Spring Cloud BOM,
       Testcontainers BOM) y los módulos.
-- [ ] Crear cada aplicación mínima con actuator.
-- [ ] Verificar: `./mvnw clean verify` → BUILD SUCCESS.
-- [ ] Commit `chore: estructura del monorepo`.
+- [x] Crear cada aplicación mínima con actuator.
+- [x] Verificar: `./mvnw clean verify` → BUILD SUCCESS.
+- [x] Commit `chore: estructura del monorepo`.
 
 ### Tarea 1.2: Infraestructura local
 
