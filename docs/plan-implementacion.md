@@ -286,11 +286,11 @@ horas se cuentan en `America/Lima`.
   long transaccionesUltimos10Min, UltimaUbicacion ultima, Set<String> dispositivos)`
 - Prueba: `PerfilLectorIT` (Testcontainers Valkey)
 
-- [ ] Pruebas: lee todo en una sola ida y vuelta (pipeline); cliente sin claves →
+- [x] Pruebas: lee todo en una sola ida y vuelta (pipeline); cliente sin claves →
       `PerfilContexto` vacío sin excepción; `transaccionesUltimos10Min` cuenta solo
       eventos con fecha en los 10 minutos anteriores a la fecha de la transacción.
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(scoring): lectura de perfiles desde valkey`.
+- [x] Implementar y verificar.
+- [x] Commit `feat(scoring): lectura de perfiles desde valkey`.
 
 ### Tarea 4.3: Reglas R01 a R07
 
