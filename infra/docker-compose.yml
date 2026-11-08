@@ -21,6 +21,9 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNO:PLAINTEXT,HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNO
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Los datos (tópicos, changelog de perfiles, offsets) en el volumen kafka-datos: sin esto la
+      # imagen escribe en /tmp del contenedor y todo se pierde cuando se recrea.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
