@@ -84,6 +84,8 @@ Esto levanta lo siguiente; los tópicos de Kafka se crean solos:
 | PostgreSQL | `localhost:5432` |
 | Valkey | `localhost:6379` |
 | Keycloak | http://localhost:8180 (realm `fraude`) |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 |
 
 Los valores de `.env.example` son solo para uso local.
 
@@ -158,6 +160,23 @@ cd generador
 
 Para empezar de cero: `docker compose -f infra/docker-compose.yml down -v`, que borra los
 datos, y después repite los pasos 1 a 3.
+
+## Observabilidad
+
+Prometheus y Grafana se levantan junto con el resto de la infraestructura (paso 1):
+
+- **Grafana** (http://localhost:3000): usuario `admin`, contraseña `GF_SECURITY_ADMIN_PASSWORD`
+  del `.env`. Abre el tablero *Detección de fraude: operación*, que muestra:
+  - transacciones por segundo según la decisión;
+  - respaldos;
+  - latencia p50/p95/p99 del scoring;
+  - servicios arriba;
+  - lag de los consumidores de Kafka;
+  - eventos pendientes en el outbox.
+- **Prometheus** (http://localhost:9090): lee `/actuator/prometheus` de los cinco servicios
+  cada 5 s. Las alertas (servicio caído, outbox creciendo, lag alto, p95 sobre 50 ms y
+  respaldos sobre el 5 %) se ven en http://localhost:9090/alerts; en local no hay
+  Alertmanager.
 
 ## Usuarios de prueba
 

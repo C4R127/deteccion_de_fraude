@@ -17,6 +17,8 @@ import com.fraude.common.outbox.OutboxStore;
 import com.fraude.transacciones.scoring.ScoringClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -37,9 +39,12 @@ public class RegistroTransaccionService {
     private final TransactionTemplate tx;
     private final OutboxStore outbox;
     private final ObjectMapper json = JsonFraude.objectMapper();
+    private final MeterRegistry metricas;
 
     public RegistroTransaccionService(TarjetaRepository tarjetas, ComercioRepository comercios,
-            TransaccionStore store, ScoringClient scoring, TransactionTemplate tx, OutboxStore outbox) {
+            TransaccionStore store, ScoringClient scoring, TransactionTemplate tx, OutboxStore outbox,
+            MeterRegistry metricas) {
+        this.metricas = metricas;
         this.tarjetas = tarjetas;
         this.comercios = comercios;
         this.store = store;
@@ -67,7 +72,7 @@ public class RegistroTransaccionService {
                 req.dispositivoHuella(), req.monto(), req.moneda(), Canal.valueOf(req.canal()), req.pais(),
                 req.latitud(), req.longitud(), req.fecha());
 
-        return tx.execute(estado -> {
+        Registro registro = tx.execute(estado -> {
             if (!store.insertarPendiente(pendiente)) {
                 // Otra solicitud con el mismo idExterno ganó la carrera y ya hizo commit.
                 return new Registro(store.buscarRespuesta(req.idExterno()).orElseThrow(), false);
@@ -79,6 +84,20 @@ public class RegistroTransaccionService {
             outbox.guardar(Topicos.TRANSACCIONES_CREADAS, evento.tarjetaId().toString(), aJson(evento));
             return new Registro(respuesta, true);
         });
+        if (registro.nueva()) {
+            contar(registro.respuesta());
+        }
+        return registro;
+    }
+
+    /** {@code transacciones.decisiones}: throughput, decisiones y respaldos para Prometheus (Tarea 6.5). */
+    private void contar(TransaccionResponse r) {
+        Counter.builder("transacciones.decisiones")
+                .description("Transacciones registradas por decisión; respaldo=true si el scoring no respondió a tiempo")
+                .tag("decision", r.decision().name())
+                .tag("respaldo", String.valueOf(r.respaldo()))
+                .register(metricas)
+                .increment();
     }
 
     private String aJson(TransaccionCreadaEvento evento) {

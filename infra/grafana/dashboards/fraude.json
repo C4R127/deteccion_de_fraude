@@ -1,0 +1,141 @@
+{
+  "uid": "fraude-operacion",
+  "title": "Detección de fraude: operación",
+  "description": "Latencia, throughput, respaldos, lag de Kafka y outbox (Tarea 6.5).",
+  "tags": ["fraude"],
+  "timezone": "America/Lima",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "graphTooltip": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Transacciones por segundo",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(transacciones_decisiones_total[1m]))" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "#2a78d6" } } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "none", "graphMode": "area" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Respaldos (últimos 5 min)",
+      "description": "Transacciones aprobadas porque el scoring no respondió a tiempo (ADR 0001).",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(increase(transacciones_decisiones_total{respaldo=\"true\"}[5m])) or vector(0)" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#0ca30c", "value": null }, { "color": "#fab219", "value": 1 }, { "color": "#d03b3b", "value": 10 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Latencia p95 del scoring",
+      "description": "Objetivo de §7.4: menos de 50 ms.",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "max(scoring_evaluacion_latencia_seconds{quantile=\"0.95\"}) * 1000" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms", "decimals": 1,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#0ca30c", "value": null }, { "color": "#fab219", "value": 40 }, { "color": "#d03b3b", "value": 50 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Servicios arriba",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(up{job=\"fraude\"})" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "decimals": 0, "max": 5,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "#d03b3b", "value": null }, { "color": "#0ca30c", "value": 5 }] }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Transacciones por segundo según decisión",
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (decision) (rate(transacciones_decisiones_total{respaldo=\"false\"}[1m]))", "legendFormat": "{{decision}}" },
+        { "refId": "B", "expr": "sum(rate(transacciones_decisiones_total{respaldo=\"true\"}[1m]))", "legendFormat": "RESPALDO" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "bars", "barAlignment": 0, "fillOpacity": 85, "lineWidth": 1, "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "APROBAR" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#0ca30c" } }] },
+          { "matcher": { "id": "byName", "options": "REVISAR" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#fab219" } }] },
+          { "matcher": { "id": "byName", "options": "RECHAZAR" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d03b3b" } }] },
+          { "matcher": { "id": "byName", "options": "RESPALDO" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#898781" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "top" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Latencia del scoring (ms)",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "max by (quantile) (scoring_evaluacion_latencia_seconds{quantile=~\"0.5|0.95|0.99\"}) * 1000", "legendFormat": "p{{quantile}}" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 2, "fillOpacity": 0 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "p0.5" }, "properties": [{ "id": "displayName", "value": "p50" }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "#86b6ef" } }] },
+          { "matcher": { "id": "byName", "options": "p0.95" }, "properties": [{ "id": "displayName", "value": "p95" }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "#2a78d6" } }] },
+          { "matcher": { "id": "byName", "options": "p0.99" }, "properties": [{ "id": "displayName", "value": "p99" }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "#104281" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "top" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Lag máximo de los consumidores de Kafka",
+      "description": "Mensajes que cada servicio tiene pendientes de leer. Alerta si supera 1000 durante 2 min.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "max by (servicio) (kafka_consumer_fetch_manager_records_lag_max)", "legendFormat": "{{servicio}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 0 } } },
+      "options": { "legend": { "displayMode": "list", "placement": "top" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Eventos pendientes en el outbox",
+      "description": "Eventos guardados que el publicador todavía no envió a Kafka (ADR 0010). Alerta si supera 100 durante 2 min.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "max by (servicio) (outbox_pendientes)", "legendFormat": "{{servicio}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 0 } } },
+      "options": { "legend": { "displayMode": "list", "placement": "top" }, "tooltip": { "mode": "multi" } }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 package com.fraude.gateway;
 
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -36,6 +37,8 @@ import reactor.core.publisher.Mono;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(GatewaySeguridadIT.Infra.class)
+// Spring Boot desactiva la exportación de métricas en pruebas; aquí se prueba /actuator/prometheus.
+@AutoConfigureObservability(tracing = false)
 class GatewaySeguridadIT {
 
     private static final String SISTEMA = "rol-SISTEMA-generador";
@@ -175,6 +178,12 @@ class GatewaySeguridadIT {
 
         cliente.get().uri("/api/v1/metricas/transacciones?desde=2026-11-01T00:00:00Z").headers(h -> h.setBearerAuth(ANALISTA))
                 .exchange().expectStatus().isOk().expectBody().jsonPath("$.total").isEqualTo(7);
+    }
+
+    @Test
+    void publica_metricas_para_prometheus() {
+        cliente.get().uri("/actuator/prometheus").exchange().expectStatus().isOk()
+                .expectBody(String.class).value(cuerpo -> assertThat(cuerpo).contains("jvm_memory_used_bytes"));
     }
 
     @Test

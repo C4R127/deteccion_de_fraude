@@ -1,5 +1,6 @@
 package com.fraude.scoring.metricas;
 
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,6 +28,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 /** Métricas de detección (§9, ADR 0017) con datos fijos. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({TestcontainersConfig.class, TokensDePrueba.class})
+// Spring Boot desactiva la exportación de métricas en pruebas; aquí se prueba /actuator/prometheus.
+@AutoConfigureObservability(tracing = false)
 class MetricasServiceIT {
 
     private static final Instant T0 = Instant.parse("2026-11-01T12:00:00Z");
@@ -228,6 +231,17 @@ class MetricasServiceIT {
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(mapper.readTree(r.getBody()).get("paths").has("/api/v1/metricas")).isTrue();
         assertThat(http.getForEntity("/swagger-ui/index.html", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void publica_metricas_para_prometheus_sin_token() throws Exception {
+        llamar(HttpMethod.POST, "/internal/v1/evaluaciones", null, solicitud(UUID.randomUUID()));
+
+        var r = http.getForEntity("/actuator/prometheus", String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(r.getBody()).contains("scoring_evaluacion_latencia_seconds{quantile=\"0.95\"")
+                .contains("outbox_pendientes").contains("kafka_consumer_fetch_manager_records_lag_max");
     }
 
     // --- el motor no usa la verdad ---

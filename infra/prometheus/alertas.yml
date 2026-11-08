@@ -1,0 +1,41 @@
+# Alertas de CLAUDE.md ("Observabilidad": lag de consumidores y outbox pendiente) y de §7.4.
+# En local se ven en http://localhost:9090/alerts (no hay Alertmanager).
+groups:
+  - name: fraude
+    rules:
+      - alert: ServicioCaido
+        expr: up{job="fraude"} == 0
+        for: 1m
+        labels: { severidad: critica }
+        annotations:
+          resumen: "{{ $labels.servicio }} no responde a Prometheus"
+
+      - alert: OutboxPendienteCreciendo
+        expr: max by (servicio) (outbox_pendientes) > 100
+        for: 2m
+        labels: { severidad: alta }
+        annotations:
+          resumen: "{{ $labels.servicio }} tiene {{ $value }} eventos sin publicar en el outbox"
+
+      - alert: LagDeConsumidorAlto
+        expr: max by (servicio) (kafka_consumer_fetch_manager_records_lag_max) > 1000
+        for: 2m
+        labels: { severidad: alta }
+        annotations:
+          resumen: "Un consumidor de {{ $labels.servicio }} va {{ $value }} mensajes atrasado"
+
+      - alert: LatenciaScoringAlta
+        expr: max(scoring_evaluacion_latencia_seconds{quantile="0.95"}) > 0.05
+        for: 5m
+        labels: { severidad: media }
+        annotations:
+          resumen: "p95 del scoring sobre 50 ms (§7.4)"
+
+      - alert: RespaldosFrecuentes
+        expr: >
+          sum(rate(transacciones_decisiones_total{respaldo="true"}[5m]))
+            / sum(rate(transacciones_decisiones_total[5m])) > 0.05
+        for: 5m
+        labels: { severidad: alta }
+        annotations:
+          resumen: "Más del 5 % de las transacciones se aprueban por respaldo (ADR 0001)"

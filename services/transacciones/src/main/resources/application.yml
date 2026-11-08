@@ -68,4 +68,4 @@ management:
     web:
       exposure:
         # metrics expone outbox.pendientes y outbox.fallos.
-        include: health,info,metrics
+        include: health,info,metrics,prometheus

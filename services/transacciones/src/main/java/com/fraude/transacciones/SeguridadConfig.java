@@ -22,7 +22,8 @@ public class SeguridadConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Métricas (outbox.pendientes, outbox.fallos) para monitoreo; el servicio no se expone fuera.
-                        .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
+                        .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**", "/actuator/prometheus")
+                        .permitAll()
                         // Swagger: el gateway no enruta estas rutas; solo se ven en el puerto del servicio.
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/internal/v1/siembra").hasRole("SISTEMA")

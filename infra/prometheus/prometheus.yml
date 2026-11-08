@@ -1,0 +1,23 @@
+# Prometheus local (Tarea 6.5). Los servicios corren en la máquina (IDE o java -jar), no en
+# Docker: se leen por host.docker.internal.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alertas.yml
+
+scrape_configs:
+  - job_name: fraude
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels: { servicio: gateway }
+      - targets: ["host.docker.internal:8081"]
+        labels: { servicio: transacciones }
+      - targets: ["host.docker.internal:8082"]
+        labels: { servicio: scoring }
+      - targets: ["host.docker.internal:8083"]
+        labels: { servicio: perfiles }
+      - targets: ["host.docker.internal:8084"]
+        labels: { servicio: casos }

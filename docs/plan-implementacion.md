@@ -508,5 +508,7 @@ AUDITOR (§10).
 
 ### Tarea 6.5 (opcional): Observabilidad
 
-- [ ] Prometheus y Grafana en `infra/` con un panel de latencia y throughput.
-- [ ] Commit `chore(infra): prometheus y grafana`.
+- [x] Prometheus y Grafana en `infra/` con un panel de latencia y throughput. (También lag de
+      consumidores, outbox pendiente y alertas, que pide CLAUDE.md; contador nuevo
+      `transacciones.decisiones` por decisión y respaldo.)
+- [x] Commit `chore(infra): prometheus y grafana`.

@@ -27,7 +27,7 @@ public class SeguridadConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange(auth -> auth
-                        .pathMatchers("/actuator/health/**", "/actuator/health", "/actuator/info").permitAll()
+                        .pathMatchers("/actuator/health/**", "/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                         // Sin ruta en el gateway: se deja pasar para que responda 404.
                         .pathMatchers("/internal/**").permitAll()
                         // El token del WebSocket se valida en el CONNECT de STOMP (Tarea 5.2).

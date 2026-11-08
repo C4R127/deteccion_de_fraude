@@ -1,5 +1,6 @@
 package com.fraude.transacciones.transaccion;
 
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
@@ -45,6 +46,8 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({TestcontainersConfig.class, TokensDePrueba.class})
+// Spring Boot desactiva la exportación de métricas en pruebas; aquí se prueba /actuator/prometheus.
+@AutoConfigureObservability(tracing = false)
 class TransaccionApiIT {
 
     private static final String RUTA = "/api/v1/transacciones";
@@ -386,6 +389,28 @@ class TransaccionApiIT {
 
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(filas()).isZero();
+    }
+
+    private double contador(String decision, boolean respaldo) {
+        String patron = "transacciones_decisiones_total{decision=\"%s\",respaldo=\"%s\"".formatted(decision, respaldo);
+        return http.getForEntity("/actuator/prometheus", String.class).getBody().lines()
+                .filter(l -> l.startsWith(patron))
+                .mapToDouble(l -> Double.parseDouble(l.substring(l.lastIndexOf(' ') + 1)))
+                .sum();
+    }
+
+    @Test
+    void cuenta_decisiones_y_respaldos_para_prometheus() throws Exception {
+        double revisarAntes = contador("REVISAR", false);
+        double respaldoAntes = contador("APROBAR", true);
+
+        scoringRevisar();
+        enviar(cuerpoPos(UUID.randomUUID().toString()));
+        scoring.stubFor(WireMock.post(EVALUACIONES).willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+        enviar(cuerpoPos(UUID.randomUUID().toString()));
+
+        assertThat(contador("REVISAR", false)).isEqualTo(revisarAntes + 1);
+        assertThat(contador("APROBAR", true)).isEqualTo(respaldoAntes + 1);
     }
 
     @Test

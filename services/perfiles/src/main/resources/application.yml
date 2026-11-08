@@ -32,4 +32,4 @@ management:
     web:
       exposure:
         # metrics expone el lag del consumidor (kafka.consumer.fetch.manager.records.lag*).
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
