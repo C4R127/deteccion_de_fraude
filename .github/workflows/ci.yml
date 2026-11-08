@@ -1,0 +1,73 @@
+# Build y pruebas en cada push y pull request (Tarea 6.3).
+# Las pruebas de integración usan Testcontainers: el runner de Ubuntu trae Docker.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Maven)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Los application.yml leen secretos de .env; en CI se usan los valores de ejemplo
+      # (las pruebas no tocan la infraestructura local: usan Testcontainers).
+      - name: Preparar .env de ejemplo
+        run: cp .env.example .env
+      - name: Build y pruebas
+        run: ./mvnw -B -ntp verify
+
+  generador:
+    name: Generador (pytest)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: generador
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: generador/pyproject.toml
+      - name: Instalar
+        run: pip install -e ".[dev]"
+      - name: Pruebas
+        run: pytest -q
+
+  frontend:
+    name: Frontend (Vitest y build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar
+        run: npm ci
+      - name: Pruebas
+        run: npm test
+      - name: Build
+        run: npm run build
