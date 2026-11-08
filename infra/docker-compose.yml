@@ -1,4 +1,6 @@
-# Infraestructura local. Uso (desde la raíz del repositorio, con .env creado a
+# Infraestructura local. Los puertos se publican solo en 127.0.0.1: nada queda expuesto a la
+# red, porque las contraseñas de ejemplo de .env.example son públicas.
+# Uso (desde la raíz del repositorio, con .env creado a
 # partir de .env.example):
 #   docker compose -f infra/docker-compose.yml up -d
 #   docker compose -f infra/docker-compose.yml down -v   # borra datos
@@ -9,7 +11,7 @@ services:
     image: apache/kafka:4.3.2
     container_name: fraude-kafka
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -51,7 +53,7 @@ services:
     image: kafbat/kafka-ui:v1.5.0
     container_name: fraude-kafka-ui
     ports:
-      - "8090:8080"
+      - "127.0.0.1:8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
@@ -69,7 +71,7 @@ services:
     image: postgres:16.15
     container_name: fraude-postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     env_file:
       - path: ../.env
         required: true
@@ -86,7 +88,7 @@ services:
     image: valkey/valkey:8.1.11-alpine
     container_name: fraude-valkey
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - valkey-datos:/data
     healthcheck:
@@ -100,7 +102,7 @@ services:
     container_name: fraude-keycloak
     command: ["start-dev", "--import-realm"]
     ports:
-      - "8180:8080"
+      - "127.0.0.1:8180:8080"
     env_file:
       - path: ../.env
         required: true
@@ -125,7 +127,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=7d
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     # Los servicios corren en la máquina; host-gateway hace que el nombre funcione también en Linux.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -145,7 +147,7 @@ services:
       prometheus:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     env_file:
       - path: ../.env
         required: true
