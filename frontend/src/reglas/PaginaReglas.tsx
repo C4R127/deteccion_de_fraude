@@ -111,7 +111,7 @@ function Versiones({ codigo }: { codigo: string }) {
               v{v.version} {v.vigente && <Badge variant="secondary">vigente</Badge>}
             </TableCell>
             <TableCell className="tabular-nums">{v.puntos}</TableCell>
-            <TableCell className="text-xs">
+            <TableCell className="max-w-96 text-xs whitespace-normal break-words">
               {Object.entries(v.parametros).map(([k, val]) => `${k}=${mostrarParametro(val)}`).join(' · ')}
             </TableCell>
             <TableCell className="whitespace-nowrap">{formatearFecha(v.creadaEn)}</TableCell>
@@ -153,7 +153,7 @@ export function PaginaReglas() {
               <TableRow key={r.codigo}>
                 <TableCell className="font-medium">{r.codigo}</TableCell>
                 <TableCell>{r.nombre}</TableCell>
-                <TableCell className="max-w-72 text-xs text-muted-foreground">
+                <TableCell className="max-w-72 text-xs whitespace-normal break-words text-muted-foreground">
                   {Object.entries(r.parametros).map(([k, v]) => `${k}=${mostrarParametro(v)}`).join(' · ') || '—'}
                 </TableCell>
                 <TableCell className="tabular-nums">{r.puntos}</TableCell>
