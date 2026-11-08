@@ -49,6 +49,41 @@ Cada servicio tiene su propio esquema en PostgreSQL
 Los eventos usan outbox transaccional, consumidores idempotentes y tópicos de mensajes
 fallidos (DLT) ([ADR 0010](docs/adr/0010-outbox-y-mensajes-venenosos.md)).
 
+## Capturas
+
+Tomadas con el generador en vivo (20 % de fraude) sobre 30 días de historia. Los
+clientes, tarjetas y comercios son ficticios.
+
+**Dashboard.** La última hora: transacciones, respaldos, detección, precisión, latencia
+y casos abiertos, más las transacciones por minuto según decisión.
+
+![Dashboard con transacciones por minuto y decisiones](docs/img/dashboard.png)
+
+**Bandeja de casos.** Los casos nuevos llegan por WebSocket y se marcan como «En vivo».
+Se filtran por estado, prioridad y analista.
+
+![Bandeja de casos con dos casos recibidos en vivo](docs/img/casos.png)
+
+**Detalle de un caso.** Qué reglas se dispararon y con cuántos puntos, el perfil del
+cliente en los últimos 30 días y las acciones del analista.
+
+![Detalle de un caso con las reglas R01 y R05 disparadas](docs/img/detalle-caso.png)
+
+Más abajo, las últimas 20 transacciones del cliente en un mapa y en una tabla. La
+transacción sospechosa aparece resaltada.
+
+![Mapa y tabla con las últimas transacciones del cliente](docs/img/detalle-mapa.png)
+
+**Reglas.** Los puntos y los parámetros de R01–R07 se editan desde la interfaz. Cada
+cambio crea una versión nueva, y cada evaluación guarda qué versión usó.
+
+![Página de reglas con el editor de R01 abierto](docs/img/reglas.png)
+
+**Métricas.** Detección, precisión y falsos positivos contra `verdad.jsonl`, desglosados
+por escenario. También la latencia y los respaldos.
+
+![Página de métricas con detección por escenario](docs/img/metricas.png)
+
 ## Stack
 
 Java 21, Spring Boot 3.5, Spring Cloud Gateway, Apache Kafka 4 (KRaft) y Kafka Streams,
