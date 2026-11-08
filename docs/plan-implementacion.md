@@ -500,8 +500,11 @@ AUDITOR (§10).
   `0002-valkey-para-perfiles.md`, `0003-kafka-en-lugar-de-rabbitmq.md`,
   `0004-esquema-por-servicio.md`
 
-- [ ] Escribir y revisar que los comandos del README funcionan desde cero.
-- [ ] Commit `docs: readme y decisiones de arquitectura`.
+- [x] Escribir y revisar que los comandos del README funcionan desde cero. (Dos corridas con
+      `down -v`: la primera mostró que Keycloak necesita estar `healthy` antes de la siembra y
+      que la historia dejaba 1,1 % de falsos positivos; se corrigió el generador, ADR 0015, y la
+      segunda dejó 0,02 %.)
+- [x] Commit `docs: readme y decisiones de arquitectura`.
 
 ### Tarea 6.5 (opcional): Observabilidad
 
