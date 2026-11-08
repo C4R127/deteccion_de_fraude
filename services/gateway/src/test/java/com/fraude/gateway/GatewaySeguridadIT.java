@@ -169,6 +169,15 @@ class GatewaySeguridadIT {
     }
 
     @Test
+    void metricas_de_transacciones_van_a_transacciones_y_no_a_scoring() {
+        transacciones.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/v1/metricas/transacciones")).willReturn(
+                aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody("{\"total\": 7}")));
+
+        cliente.get().uri("/api/v1/metricas/transacciones?desde=2026-11-01T00:00:00Z").headers(h -> h.setBearerAuth(ANALISTA))
+                .exchange().expectStatus().isOk().expectBody().jsonPath("$.total").isEqualTo(7);
+    }
+
+    @Test
     void health_es_publico() {
         cliente.get().uri("/actuator/health").exchange().expectStatus().isOk();
     }

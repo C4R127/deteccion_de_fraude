@@ -48,6 +48,15 @@ spring:
               uri: ${rutas.transacciones}
               predicates:
                 - Path=/api/v1/transacciones/**,/api/v1/clientes/*,/api/v1/clientes/*/transacciones
+            # Métricas de cada servicio (ADR 0017): antes que la ruta general /api/v1/metricas/** de scoring.
+            - id: transacciones-metricas
+              uri: ${rutas.transacciones}
+              predicates:
+                - Path=/api/v1/metricas/transacciones
+            - id: casos-metricas
+              uri: ${rutas.casos}
+              predicates:
+                - Path=/api/v1/metricas/casos
             - id: scoring
               uri: ${rutas.scoring}
               predicates:

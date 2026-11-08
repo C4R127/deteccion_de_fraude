@@ -460,12 +460,13 @@ AUDITOR (§10).
 - Modificar: generador, comando `metricas`
 - Prueba: `MetricasServiceIT` con datos fijos
 
-- [ ] Pruebas: con 10 fraudes reales, 8 marcados y 2 legítimas marcadas entre 100
+- [x] Pruebas: con 10 fraudes reales, 8 marcados y 2 legítimas marcadas entre 100
       legítimas → detección 80 %, precisión 80 %, falsos positivos 2 %; desglose por
       escenario correcto; el motor de evaluación no consulta `etiqueta_verdad`
       (prueba que la tabla vacía no cambia ninguna decisión).
-- [ ] Implementar y verificar.
-- [ ] Commit `feat(scoring): metricas de deteccion`.
+- [x] Implementar y verificar. (ADR 0017: transacciones y casos exponen sus propias métricas;
+      el gateway las enruta antes que las de scoring.)
+- [x] Commit `feat(scoring): metricas de deteccion`.
 
 ### Tarea 6.2: Dashboard
 

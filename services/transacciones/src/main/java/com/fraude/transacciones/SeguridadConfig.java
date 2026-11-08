@@ -25,7 +25,7 @@ public class SeguridadConfig {
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/internal/v1/siembra").hasRole("SISTEMA")
                         .requestMatchers(HttpMethod.POST, "/api/v1/transacciones").hasRole("SISTEMA")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/clientes/**")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/clientes/**", "/api/v1/metricas/transacciones")
                         .hasAnyRole("ADMIN", "SUPERVISOR", "ANALISTA", "AUDITOR")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())

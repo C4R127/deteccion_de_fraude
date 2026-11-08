@@ -5,6 +5,7 @@
 - ``historia --dias N``: envía N días de transacciones normales con fechas pasadas.
 - ``vivo --tps T``: envía transacciones con fecha actual a T por segundo, mezclando los
   escenarios de fraude (§6.3); cada fraude registrado se agrega a ``verdad.jsonl``.
+- ``metricas``: sube ``verdad.jsonl`` al scoring para calcular la detección (§9).
 """
 
 import argparse
@@ -22,6 +23,7 @@ from generador.clientes import crear_poblacion
 from generador.config import Config, cargar_config
 from generador.fraude import EscritorVerdad, MezcladorVivo, Planificada
 from generador.ids import GeneradorIds
+from generador.metricas import leer_verdad, subir_verdad
 from generador.modelos import Poblacion
 from generador.normal import generar_normal
 from generador.siembra import enviar_siembra
@@ -55,6 +57,9 @@ def _argumentos(argv: list[str] | None) -> argparse.Namespace:
     vivo.add_argument("--duracion", type=float, help="segundos de envío (por defecto, hasta Ctrl+C)")
     vivo.add_argument("--verdad", type=Path, default=VERDAD_POR_DEFECTO,
                       help="archivo JSONL donde se agregan los fraudes enviados")
+
+    metricas = sub.add_parser("metricas", help="sube verdad.jsonl para las métricas de detección")
+    metricas.add_argument("--verdad", type=Path, default=VERDAD_POR_DEFECTO, help="archivo JSONL a subir")
     return parser.parse_args(argv)
 
 
@@ -133,9 +138,34 @@ async def _vivo(config: Config, poblacion: Poblacion, rng: np.random.Generator, 
     return 0
 
 
+async def _metricas(config: Config, ruta: Path) -> int:
+    if not ruta.exists():
+        print(f"metricas: {ruta} no existe (se crea con el comando vivo)", file=sys.stderr)
+        return 1
+    try:
+        etiquetas = leer_verdad(ruta)
+    except ValueError as error:
+        print(f"metricas: {error}", file=sys.stderr)
+        return 1
+    async with httpx.AsyncClient(timeout=TIEMPO_LIMITE_HTTP) as http:
+        try:
+            recibidas, nuevas = await subir_verdad(etiquetas, config.url_gateway, http,
+                                                   ProveedorToken(config.oauth, http))
+        except httpx.HTTPStatusError as error:
+            print(f"metricas fallida: HTTP {error.response.status_code} {error.response.text}", file=sys.stderr)
+            return 1
+        except (httpx.HTTPError, RuntimeError) as error:
+            print(f"metricas fallida: {error}", file=sys.stderr)
+            return 1
+    print(f"verdad subida: recibidas={recibidas} nuevas={nuevas}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _argumentos(argv)
     config = cargar_config(args.config)
+    if args.comando == "metricas":
+        return asyncio.run(_metricas(config, args.verdad))
     if args.clientes is not None:
         config = config.model_copy(update={"clientes": args.clientes})
     rng = np.random.default_rng(config.semilla)

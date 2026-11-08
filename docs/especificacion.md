@@ -278,7 +278,10 @@ Calculadas en el scoring cruzando `evaluacion` con `etiqueta_verdad` (por
 - Casos abiertos por prioridad y analista, tiempo medio de resolución.
 - Monto de fraude evitado (fraude real RECHAZADO) y no detectado (fraude real APROBADO).
 
-Endpoint: `GET /api/v1/metricas?desde=&hasta=`.
+Endpoint: `GET /api/v1/metricas?desde=&hasta=`. Los respaldos y el volumen por minuto los
+entrega transacciones (`GET /api/v1/metricas/transacciones`) y los casos los entrega casos
+(`GET /api/v1/metricas/casos`): ningún servicio lee el esquema de otro. Por escenario se
+informan detección y montos; precisión y falsos positivos solo globales (ADR 0017).
 
 ## 10. Roles y seguridad
 
@@ -319,6 +322,8 @@ para AUDITOR (ej. "J*** P***"); límite de uso en `POST /api/v1/transacciones`
 | `GET /api/v1/evaluaciones/{transaccionId}` | scoring | lectura |
 | `POST /api/v1/metricas/verdad` | scoring | ADMIN, SISTEMA |
 | `GET /api/v1/metricas` | scoring | lectura |
+| `GET /api/v1/metricas/transacciones` | transacciones (ADR 0017) | lectura |
+| `GET /api/v1/metricas/casos` | casos (ADR 0017) | lectura |
 | `GET /api/v1/casos?estado=&prioridad=&analista=&desde=&hasta=&pagina=&tamano=` | casos | lectura |
 | `GET /api/v1/casos/{id}` | casos | lectura |
 | `POST /api/v1/casos/{id}/tomar` | casos | ANALISTA, SUPERVISOR, ADMIN |
