@@ -213,3 +213,53 @@ def test_dos_ventanas_distintas_no_repiten_id_externo():
     larga = corrida(DESDE)
     assert corta and larga
     assert corta.isdisjoint(larga)
+
+
+# --- Coherencia con las reglas en la historia (ADR 0015, actualización) ---
+
+def _dispara_r03(a, b):
+    """R03 (§7.2): bajo 60 s, más de 50 km; desde 60 s, más de 800 km/h."""
+    from generador.geo import haversine_km
+    segundos = (b.fecha - a.fecha).total_seconds()
+    distancia = haversine_km(float(a.latitud), float(a.longitud), float(b.latitud), float(b.longitud))
+    return distancia > 50 if segundos < 60 else distancia / (segundos / 3600) > 800
+
+
+def test_historia_sin_viajes_imposibles():
+    """R03 no debe saltar con tráfico normal: entre compras físicas de una tarjeta, viaje posible."""
+    config = _config(clientes=200, semilla=42)
+    rng = np.random.default_rng(config.semilla)
+    poblacion = crear_poblacion(config, rng)
+    por_tarjeta = {}
+    for t in generar_normal(poblacion, DESDE, DESDE + timedelta(days=30), rng):
+        if t.latitud is not None:
+            por_tarjeta.setdefault(t.tarjetaToken, []).append(t)
+    revisadas = 0
+    for lista in por_tarjeta.values():
+        for anterior, actual in zip(lista, lista[1:]):
+            revisadas += 1
+            assert not _dispara_r03(anterior, actual), (anterior, actual)
+    assert revisadas > 3000
+
+
+def test_historia_sigue_teniendo_viajes_legitimos(poblacion_y_transacciones):
+    """La regla de viaje no elimina las compras en otra ciudad: solo exige tiempo para llegar."""
+    poblacion, transacciones = poblacion_y_transacciones
+    ciudad_de_cliente = {c.id: c.ciudad_residencia for c in poblacion.clientes}
+    cliente_de_token = {t.token: t.cliente_id for t in poblacion.tarjetas}
+    ciudad_de_comercio = {c.id: c.ciudad for c in poblacion.comercios}
+    fuera = [t for t in transacciones if t.canal == "POS"
+             and ciudad_de_comercio[t.comercioId] != ciudad_de_cliente[cliente_de_token[t.tarjetaToken]]]
+    assert fuera
+
+
+def test_retiros_de_cajero_proporcionales_al_gasto():
+    """R01 no debe saltar por un retiro normal: a lo sumo 3 veces el gasto medio (mínimo 50)."""
+    config = _config(clientes=200, semilla=7)
+    rng = np.random.default_rng(config.semilla)
+    poblacion = crear_poblacion(config, rng)
+    gasto = {t.token: c.gasto_media for c in poblacion.clientes for t in poblacion.tarjetas if t.cliente_id == c.id}
+    retiros = [t for t in generar_normal(poblacion, DESDE, HASTA, rng) if t.canal == "ATM"]
+    assert len(retiros) > 50
+    for t in retiros:
+        assert t.monto <= max(Decimal("50"), 3 * gasto[t.tarjetaToken])

@@ -41,6 +41,21 @@ Se ajustan los escenarios y el generador. Los puntos y las reglas no cambian.
   cada escenario.
 - **`verdad.jsonl`**: solo se escribe un fraude que la API registró (respuesta 201 o 200).
 
+### Actualización (Tarea 6.4): la historia también es coherente con las reglas
+
+Al probar el README desde cero, `historia --dias 30` dejó 236 falsos positivos (1,1 %):
+
+- 147 por R03: compras en otra ciudad sin tiempo para viajar.
+- 89 por R01: retiros de cajero de hasta S/ 500 en clientes que gastan unos S/ 60.
+
+Se corrige el generador, no las reglas:
+
+- `historia` usa el mismo registro de viajes que `vivo` (`RegistroViajes`), con el criterio
+  de R03 y margen: bajo 60 s, hasta 50 km; desde 60 s, a 500 km/h. Si el viaje no da, la
+  compra pasa a la ciudad donde está el cliente. Si aun así no da (dos comercios lejanos de
+  la misma ciudad con un minuto de diferencia), se corre a la primera hora posible.
+- El retiro de cajero es como máximo 3 veces el gasto medio del cliente (mínimo S/ 50).
+
 ## Consecuencias
 
 - Los cinco escenarios pueden alcanzar REVISAR con las reglas iniciales. Las primeras cinco

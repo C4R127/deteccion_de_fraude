@@ -1,5 +1,6 @@
 """Transacciones normales (sin fraude) según los hábitos de cada cliente."""
 
+import math
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -20,9 +21,14 @@ MONTO_MINIMO = Decimal("1.00")
 # Probabilidad de que una compra POS ocurra en otra ciudad (viaje legítimo).
 PROBABILIDAD_POS_FUERA = 0.05
 MONTOS_CAJERO = (50, 100, 100, 200, 200, 300, 400, 500)
+# Retiro máximo en veces el gasto medio del cliente (ADR 0015).
+FACTOR_CAJERO = 3
 # En vivo, una compra fuera de la ciudad solo si el viaje desde la última compra física
 # es posible (ADR 0015); margen bajo los 800 km/h de R03.
 VELOCIDAD_MAXIMA_VIAJE_KMH = 500.0
+# R03 con menos de 60 s entre compras: se cumple si la distancia supera 50 km.
+SEGUNDOS_MINIMOS_VIAJE = 60
+DISTANCIA_SIN_TIEMPO_KM = 50.0
 
 
 class IndiceComercios:
@@ -48,6 +54,59 @@ class IndiceComercios:
         self.ciudades = sorted(self.cajeros)
 
 
+class RegistroViajes:
+    """Última compra física de cada cliente, para que el tráfico normal no haga viajes
+    imposibles (R03 saltaría sin que haya fraude). Si el viaje no da, el cliente sigue
+    comprando en la ciudad donde está (ADR 0015).
+    """
+
+    def __init__(self, indice: IndiceComercios):
+        self._indice = indice
+        self._ultima: dict[UUID, tuple[datetime, float, float, str]] = {}
+
+    def registrar(self, cliente_id: UUID, tx: TransaccionSalida) -> None:
+        if tx.latitud is not None and tx.longitud is not None:
+            self._ultima[cliente_id] = (tx.fecha, float(tx.latitud), float(tx.longitud),
+                                        self._indice.ciudad_de[tx.comercioId])
+
+    def posible(self, cliente_id: UUID, tx: TransaccionSalida) -> bool:
+        """Mismo criterio que R03, con margen: bajo 60 s, hasta 50 km; desde 60 s, a 500 km/h."""
+        anterior = self._ultima.get(cliente_id)
+        if anterior is None or tx.latitud is None or tx.longitud is None:
+            return True
+        fecha, lat, lon, _ = anterior
+        distancia = haversine_km(lat, lon, float(tx.latitud), float(tx.longitud))
+        segundos = (tx.fecha - fecha).total_seconds()
+        if segundos < SEGUNDOS_MINIMOS_VIAJE:
+            return distancia <= DISTANCIA_SIN_TIEMPO_KM
+        return distancia <= VELOCIDAD_MAXIMA_VIAJE_KMH * segundos / 3600
+
+    def fecha_posible(self, cliente_id: UUID, tx: TransaccionSalida) -> datetime:
+        """Primera fecha en la que el viaje desde la última compra física sería posible."""
+        fecha, lat, lon, _ = self._ultima[cliente_id]
+        distancia = haversine_km(lat, lon, float(tx.latitud), float(tx.longitud))
+        segundos = max(SEGUNDOS_MINIMOS_VIAJE, distancia / VELOCIDAD_MAXIMA_VIAJE_KMH * 3600)
+        return fecha + timedelta(seconds=math.ceil(segundos) + 1)
+
+    def ciudad_actual(self, cliente_id: UUID) -> str:
+        return self._ultima[cliente_id][3]
+
+    def coherente(self, cliente: Cliente, tarjeta: Tarjeta, tx: TransaccionSalida, indice: IndiceComercios,
+                  rng: np.random.Generator, ids: GeneradorIds | None, mover: bool = False) -> TransaccionSalida:
+        """Devuelve {@code tx} o, si su viaje es imposible, otra en la ciudad actual; y la registra.
+
+        Con {@code mover} (historia), si aun así no da (dos comercios lejanos de la misma ciudad
+        con un minuto de diferencia), la compra se corre a la primera hora posible.
+        """
+        if not self.posible(cliente.id, tx):
+            tx = _transaccion(cliente, tarjeta, None, indice, rng, fecha=tx.fecha, ids=ids,
+                              ciudad_fija=self.ciudad_actual(cliente.id))
+            if mover and not self.posible(cliente.id, tx):
+                tx = tx.model_copy(update={"fecha": self.fecha_posible(cliente.id, tx)})
+        self.registrar(cliente.id, tx)
+        return tx
+
+
 def generar_normal(poblacion: Poblacion, desde: datetime, hasta: datetime,
                    rng: np.random.Generator, ids: GeneradorIds | None = None) -> Iterator[TransaccionSalida]:
     """Genera transacciones en ``[desde, hasta)`` ordenadas por fecha, día por día.
@@ -56,14 +115,20 @@ def generar_normal(poblacion: Poblacion, desde: datetime, hasta: datetime,
     """
     indice = IndiceComercios(poblacion.comercios)
     tarjeta_de = {t.cliente_id: t for t in poblacion.tarjetas}
+    viajes = RegistroViajes(indice)
     dia = desde.astimezone(LIMA).replace(hour=0, minute=0, second=0, microsecond=0)
     while dia < hasta:
         del_dia: list[TransaccionSalida] = []
         for cliente in poblacion.clientes:
-            for _ in range(int(rng.poisson(cliente.transacciones_por_dia))):
-                tx = _transaccion(cliente, tarjeta_de[cliente.id], dia, indice, rng, ids=ids)
+            tarjeta = tarjeta_de[cliente.id]
+            propias = [_transaccion(cliente, tarjeta, dia, indice, rng, ids=ids)
+                       for _ in range(int(rng.poisson(cliente.transacciones_por_dia)))]
+            # En orden de hora, para revisar cada viaje desde la compra física anterior.
+            for tx in sorted(propias, key=lambda t: t.fecha):
                 if desde <= tx.fecha < hasta:
-                    del_dia.append(tx)
+                    tx = viajes.coherente(cliente, tarjeta, tx, indice, rng, ids, mover=True)
+                    if tx.fecha < hasta:
+                        del_dia.append(tx)
         del_dia.sort(key=lambda t: (t.fecha, str(t.idExterno)))
         yield from del_dia
         dia += timedelta(days=1)  # Lima no tiene horario de verano
@@ -88,9 +153,9 @@ class GeneradorVivo:
         self._tarjeta_de = {t.cliente_id: t for t in poblacion.tarjetas}
         self._posicion = {c.id: i for i, c in enumerate(poblacion.clientes)}
         self._pesos = np.array([c.transacciones_por_dia for c in poblacion.clientes])
-        # Última transacción de cada cliente (epoch s; -inf = nunca) y última compra física.
+        # Última transacción de cada cliente (epoch s; -inf = nunca) y viajes.
         self._ultima = np.full(len(poblacion.clientes), -np.inf)
-        self._ultima_fisica: dict[UUID, tuple[datetime, float, float, str]] = {}
+        self._viajes = RegistroViajes(self._indice)
 
     @property
     def indice(self) -> IndiceComercios:
@@ -112,29 +177,18 @@ class GeneradorVivo:
         cliente = self._poblacion.clientes[int(self._rng.choice(len(pesos), p=pesos / pesos.sum()))]
         tarjeta = self._tarjeta_de[cliente.id]
         tx = _transaccion(cliente, tarjeta, None, self._indice, self._rng, fecha=fecha, ids=self._ids)
-        if not self._viaje_posible(cliente.id, tx):
-            # Sigue en la ciudad de su última compra física hasta que el viaje sea posible.
-            tx = _transaccion(cliente, tarjeta, None, self._indice, self._rng, fecha=fecha, ids=self._ids,
-                              ciudad_fija=self._ultima_fisica[cliente.id][3])
-        self.registrar(cliente.id, tx)
+        tx = self._viajes.coherente(cliente, tarjeta, tx, self._indice, self._rng, self._ids)
+        self._registrar_hora(cliente.id, tx)
         return tx
 
     def registrar(self, cliente_id: UUID, tx: TransaccionSalida) -> None:
         """Anota una transacción del cliente (también las de fraude) para el espaciado y los viajes."""
+        self._registrar_hora(cliente_id, tx)
+        self._viajes.registrar(cliente_id, tx)
+
+    def _registrar_hora(self, cliente_id: UUID, tx: TransaccionSalida) -> None:
         posicion = self._posicion[cliente_id]
         self._ultima[posicion] = max(self._ultima[posicion], tx.fecha.timestamp())
-        if tx.latitud is not None and tx.longitud is not None:
-            self._ultima_fisica[cliente_id] = (tx.fecha, float(tx.latitud), float(tx.longitud),
-                                               self._indice.ciudad_de[tx.comercioId])
-
-    def _viaje_posible(self, cliente_id: UUID, tx: TransaccionSalida) -> bool:
-        anterior = self._ultima_fisica.get(cliente_id)
-        if anterior is None or tx.latitud is None or tx.longitud is None:
-            return True
-        fecha, lat, lon, _ = anterior
-        distancia = haversine_km(lat, lon, float(tx.latitud), float(tx.longitud))
-        horas = (tx.fecha - fecha).total_seconds() / 3600
-        return distancia <= VELOCIDAD_MAXIMA_VIAJE_KMH * horas if horas > 0 else distancia <= 50
 
 
 def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime | None, indice: IndiceComercios,
@@ -156,7 +210,9 @@ def _transaccion(cliente: Cliente, tarjeta: Tarjeta, dia_lima: datetime | None, 
     elif canal == "ATM":
         comercio = _elegir(rng, indice.cajeros[ciudad_fija or cliente.ciudad_residencia])
         dispositivo = None
-        monto = Decimal(int(rng.choice(MONTOS_CAJERO))).quantize(CENTIMOS)
+        # Proporcional al gasto: un retiro normal no debe superar 5 veces el promedio (R01).
+        tope = max(MONTOS_CAJERO[0], FACTOR_CAJERO * float(cliente.gasto_media))
+        monto = Decimal(int(rng.choice([m for m in MONTOS_CAJERO if m <= tope]))).quantize(CENTIMOS)
     else:
         ciudad = cliente.ciudad_residencia
         if ciudad_fija is not None:
