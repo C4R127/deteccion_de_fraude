@@ -12,8 +12,3 @@ export function Pagina({ titulo, descripcion, children }: { titulo: string; desc
     </section>
   );
 }
-
-/** Contenido pendiente de una fase posterior del plan. */
-export function Pendiente({ titulo, tarea }: { titulo: string; tarea: string }) {
-  return <Pagina titulo={titulo} descripcion={`Se construye en la ${tarea} del plan.`} />;
-}

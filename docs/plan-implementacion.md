@@ -474,8 +474,11 @@ AUDITOR (§10).
 - Crear: páginas `Dashboard` y `Metricas` con ECharts (volumen por minuto, decisiones,
   latencia, detección y precisión por escenario, casos por prioridad)
 
-- [ ] Implementar y verificar visualmente con el generador en modo `vivo`.
-- [ ] Commit `feat(frontend): dashboard y metricas`.
+- [x] Implementar y verificar visualmente con el generador en modo `vivo`. (12 minutos a
+      0,5 tps con 20 % de fraude: 360 transacciones, 0 respaldos, detección 60 %, precisión
+      97,3 %, falsos positivos 0,3 %, p95 4 ms. CARD_TESTING 41,5 % porque sus primeras 5
+      compras se aprueban por diseño, ADR 0015; los demás escenarios 100 %.)
+- [x] Commit `feat(frontend): dashboard y metricas`.
 
 ### Tarea 6.3: Integración continua
 

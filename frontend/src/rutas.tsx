@@ -5,7 +5,9 @@ import { useSesion } from '@/auth/sesion';
 import { PaginaCasos } from '@/casos/PaginaCasos';
 import { PaginaDetalleCaso } from '@/casos/PaginaDetalleCaso';
 import { Layout } from '@/layout/Layout';
-import { Pagina, Pendiente } from '@/paginas/Pagina';
+import { PaginaDashboard } from '@/metricas/PaginaDashboard';
+import { PaginaMetricas } from '@/metricas/PaginaMetricas';
+import { Pagina } from '@/paginas/Pagina';
 import { PaginaListasBloqueo } from '@/reglas/PaginaListasBloqueo';
 import { PaginaReglas } from '@/reglas/PaginaReglas';
 
@@ -43,7 +45,7 @@ export function RutasApp() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Pendiente titulo="Dashboard" tarea="Fase 6" />} />
+        <Route path="/dashboard" element={<PaginaDashboard />} />
         <Route path="/casos" element={<PaginaCasos />} />
         <Route path="/casos/:id" element={<PaginaDetalleCaso />} />
         <Route
@@ -62,7 +64,7 @@ export function RutasApp() {
             </RequierePermiso>
           }
         />
-        <Route path="/metricas" element={<Pendiente titulo="Métricas" tarea="Fase 6" />} />
+        <Route path="/metricas" element={<PaginaMetricas />} />
         <Route path="*" element={<Pagina titulo="No encontrado" descripcion="La página no existe." />} />
       </Route>
     </Routes>
