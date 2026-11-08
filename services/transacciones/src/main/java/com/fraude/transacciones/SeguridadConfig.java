@@ -23,6 +23,8 @@ public class SeguridadConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Métricas (outbox.pendientes, outbox.fallos) para monitoreo; el servicio no se expone fuera.
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
+                        // Swagger: el gateway no enruta estas rutas; solo se ven en el puerto del servicio.
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/internal/v1/siembra").hasRole("SISTEMA")
                         .requestMatchers(HttpMethod.POST, "/api/v1/transacciones").hasRole("SISTEMA")
                         .requestMatchers(HttpMethod.GET, "/api/v1/clientes/**", "/api/v1/metricas/transacciones")

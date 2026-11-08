@@ -131,6 +131,15 @@ class ClienteApiIT {
     }
 
     @Test
+    void publica_la_documentacion_openapi_sin_token() throws Exception {
+        var r = http.getForEntity("/v3/api-docs", String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(mapper.readTree(r.getBody()).get("paths").has("/api/v1/clientes/{id}")).isTrue();
+        assertThat(http.getForEntity("/swagger-ui/index.html", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void cliente_inexistente_responde_404() {
         assertThat(obtener(UUID.randomUUID().toString(), TokensDePrueba.ANALISTA).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);

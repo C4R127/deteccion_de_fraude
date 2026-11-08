@@ -24,6 +24,8 @@ public class SeguridadConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
+                        // Swagger: el gateway no enruta estas rutas; solo se ven en el puerto del servicio.
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/internal/v1/evaluaciones").permitAll()
                         .requestMatchers("/api/v1/reglas/**", "/api/v1/listas-bloqueo/**").hasAnyRole("ADMIN", "SUPERVISOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/metricas/verdad").hasAnyRole("ADMIN", "SISTEMA")

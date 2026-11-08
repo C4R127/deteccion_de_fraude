@@ -221,6 +221,15 @@ class MetricasServiceIT {
                 .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
+    @Test
+    void publica_la_documentacion_openapi_sin_token() throws Exception {
+        var r = http.getForEntity("/v3/api-docs", String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(mapper.readTree(r.getBody()).get("paths").has("/api/v1/metricas")).isTrue();
+        assertThat(http.getForEntity("/swagger-ui/index.html", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
     // --- el motor no usa la verdad ---
 
     private static String solicitud(UUID idExterno) {

@@ -364,6 +364,15 @@ class CasosApiIT {
     }
 
     @Test
+    void publica_la_documentacion_openapi_sin_token() throws Exception {
+        var r = http.getForEntity("/v3/api-docs", String.class);
+
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(mapper.readTree(r.getBody()).get("paths").has("/api/v1/casos/{id}/cerrar")).isTrue();
+        assertThat(http.getForEntity("/swagger-ui/index.html", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void el_historial_solo_admite_insert() throws Exception {
         UUID caso = crearCaso(decision(55, Decision.REVISAR));
 

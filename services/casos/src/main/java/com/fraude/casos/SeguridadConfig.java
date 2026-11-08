@@ -25,6 +25,8 @@ public class SeguridadConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/metrics/**").permitAll()
+                        // Swagger: el gateway no enruta estas rutas; solo se ven en el puerto del servicio.
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Handshake del WebSocket: el token se valida en el CONNECT de STOMP (AutenticacionStomp).
                         .requestMatchers("/ws", "/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/casos", "/api/v1/casos/**", "/api/v1/metricas/casos")
