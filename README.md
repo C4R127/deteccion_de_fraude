@@ -1,18 +1,129 @@
 # Detección de fraude bancario en tiempo real
 
-Plataforma de portafolio que evalúa transacciones bancarias simuladas en línea, decide
-**APROBAR / REVISAR / RECHAZAR** con un motor de reglas y lleva los casos sospechosos a
-una bandeja de analistas que se actualiza en vivo. Un generador inyecta fraudes conocidos
-para medir la detección contra la verdad. **Todos los datos son ficticios.**
+[![CI](https://github.com/C4R127/deteccion_de_fraude/actions/workflows/ci.yml/badge.svg)](https://github.com/C4R127/deteccion_de_fraude/actions/workflows/ci.yml)
+
+Cada vez que alguien paga con su tarjeta, el banco tiene unos milisegundos para decidir si
+el pago es legítimo. Este proyecto simula ese momento de punta a punta: recibe pagos,
+decide en línea si **aprobarlos, revisarlos o rechazarlos**, y envía los sospechosos a un
+equipo de analistas que los investiga desde una aplicación web que se actualiza en vivo.
+
+Es un proyecto de portafolio. **Los clientes, las tarjetas, los comercios y los pagos son
+ficticios:** los crea un generador que además mete fraudes a propósito para comprobar
+cuántos detecta el sistema.
+
+![Dashboard con transacciones por minuto, detección y casos abiertos](docs/img/dashboard.png)
 
 <!-- GIF de demo: graba la bandeja recibiendo casos en vivo y el dashboard, y guárdalo en docs/demo.gif -->
 <!-- ![Demo](docs/demo.gif) -->
 
-- Especificación: [docs/especificacion.md](docs/especificacion.md)
-- Plan de implementación: [docs/plan-implementacion.md](docs/plan-implementacion.md)
-- Decisiones de arquitectura: [docs/adr/](docs/adr/)
+## En pocas palabras
 
-## Cómo funciona
+- **Decide en milisegundos.** Un motor de reglas compara cada pago con el comportamiento
+  habitual del cliente: cuánto gasta, desde qué dispositivos, en qué ciudades y a qué
+  hora. El objetivo es que el 95 % de las decisiones tarde menos de 50 ms.
+- **Nunca bloquea un pago por lentitud.** Si la evaluación tarda más de 200 ms, el pago
+  se aprueba por respaldo y la evaluación se guarda igual para revisarla después.
+- **Los analistas trabajan en vivo.** Los casos sospechosos aparecen en la bandeja sin
+  recargar la página. Al confirmar un fraude, la tarjeta y el dispositivo quedan
+  bloqueados.
+- **Las reglas se ajustan sin programar.** Los puntos y los umbrales se editan desde la
+  interfaz, y cada cambio queda versionado.
+- **La detección se mide.** El generador anota qué pagos eran fraude, y el sistema
+  calcula cuántos detectó y cuántas veces se equivocó.
+- **Diseñado para no perder eventos.** Los servicios se comunican por Kafka con
+  confirmación de entrega y reintentos, y toleran recibir el mismo mensaje dos veces.
+
+## Recorrido por la aplicación
+
+**Bandeja de casos.** Los pagos sospechosos se convierten en casos con prioridad. Los
+nuevos llegan por WebSocket y se marcan como «En vivo». Se pueden filtrar por estado,
+prioridad y analista.
+
+![Bandeja de casos con dos casos recibidos en vivo](docs/img/casos.png)
+
+**Detalle de un caso.** Muestra por qué el pago es sospechoso. En este ejemplo, el monto
+es once veces el gasto promedio del cliente (R01, +40 puntos) y se hizo desde un
+dispositivo que nunca había usado (R05, +25 puntos). Al lado aparece el perfil del cliente
+en los últimos 30 días. El analista puede tomar el caso, asignarlo o cerrarlo.
+
+![Detalle de un caso con las reglas R01 y R05 disparadas](docs/img/detalle-caso.png)
+
+Más abajo están las últimas 20 compras del cliente en un mapa y en una tabla. El pago
+sospechoso aparece resaltado.
+
+![Mapa y tabla con las últimas transacciones del cliente](docs/img/detalle-mapa.png)
+
+**Reglas.** El supervisor ajusta los puntos y parámetros de cada regla. Cada cambio crea
+una versión nueva, y cada evaluación guarda con qué versión se tomó la decisión.
+
+![Página de reglas con el editor de R01 abierto](docs/img/reglas.png)
+
+**Métricas.** Comparan las decisiones con la lista de fraudes reales del generador:
+detección, precisión, falsos positivos y resultados por tipo de fraude.
+
+![Página de métricas con detección por escenario](docs/img/metricas.png)
+
+## Cómo decide
+
+Cada regla que se cumple suma puntos. Con **40 puntos o más** el pago queda en
+**REVISAR** y abre un caso; con **70 o más**, se **RECHAZA**. Antes de las reglas se
+revisan las listas de bloqueo de tarjetas, dispositivos y comercios.
+
+| Regla | Qué detecta | Puntos |
+|---|---|---|
+| R01 Monto inusual | Más de 5 veces el gasto promedio del cliente | 40 |
+| R02 Velocidad | 5 o más compras de la misma tarjeta en 10 minutos | 30 |
+| R03 Viaje imposible | Dos compras presenciales demasiado lejos para el tiempo transcurrido (más de 800 km/h) | 50 |
+| R04 País nuevo | Un país donde el cliente nunca compró | 20 |
+| R05 Dispositivo nuevo | Un celular o navegador que el cliente nunca usó | 25 |
+| R06 Rubro de riesgo | Apuestas, criptomonedas o transferencias de dinero | 15 |
+| R07 Horario inusual | Entre las 2 y las 5 de la mañana, si el cliente nunca compra a esa hora | 10 |
+
+Para no castigar a clientes nuevos, las reglas que dependen del historial (R01, R04 y R07)
+solo se aplican cuando el cliente tiene al menos 10 compras en los últimos 30 días.
+
+El generador simula cinco tipos de fraude:
+
+| Escenario | Qué simula | Reglas que lo detectan |
+|---|---|---|
+| Tarjeta clonada | Una compra presencial a más de 400 km, minutos después de otra local | R03 |
+| Card testing | Ráfaga de 6 a 12 compras pequeñas por internet para probar si la tarjeta funciona | R02 + R05 |
+| Toma de cuenta | Un dispositivo nuevo con un monto mucho mayor al habitual | R05 + R01 |
+| Compra atípica | Un monto muy alto en un rubro de riesgo que el cliente nunca usó | R01 + R06 |
+| Uso nocturno | Compras de madrugada en rubros de riesgo desde un dispositivo nuevo | R07 + R05 + R06 |
+
+## Resultados
+
+Corrida en vivo de 12 minutos con 20 % de fraude en una laptop con Windows, todo local:
+360 transacciones, de las cuales 60 eran fraude.
+
+| Métrica | Valor |
+|---|---|
+| Detección (fraudes marcados) | 60,0 % |
+| Precisión (marcados que sí eran fraude) | 97,3 % |
+| Falsos positivos | 0,3 % (1 de 300 pagos legítimos) |
+| Pagos aprobados por respaldo | 0 de 360 |
+| Tiempo de decisión p50 / p95 / p99 | 3 / 4 / 8 ms |
+
+| Escenario | Detección |
+|---|---|
+| Toma de cuenta | 100 % (10 de 10) |
+| Compra atípica | 100 % (5 de 5) |
+| Tarjeta clonada | 100 % (4 de 4) |
+| Card testing | 41,5 % (17 de 41) |
+
+En card testing, las primeras cinco compras de cada ráfaga se aprueban por diseño: la
+regla de velocidad necesita ver cinco compras previas. Esto es un límite conocido de un
+sistema basado en reglas. El uso nocturno no aparece porque la corrida fue de día.
+
+Sobre 30 días de historia normal (20 295 pagos legítimos) hubo 5 falsos positivos
+(0,02 %). Todos fueron de R01 y se deben a la variación natural de los montos.
+
+**Prueba de carga** (k6, 20 transacciones por segundo durante 2 minutos a través del
+gateway): 2401 solicitudes, 0 errores, p95 del scoring 14 ms y p95 de punta a punta
+182 ms.
+
+## Arquitectura
 
 ```mermaid
 flowchart LR
@@ -31,79 +142,60 @@ flowchart LR
     GW --> C
 ```
 
-1. El gateway valida el token de Keycloak y pasa la transacción a **transacciones**.
-2. transacciones pide la decisión al **scoring** con un tiempo límite de 200 ms. Si no
-   llega a tiempo, aprueba por respaldo para no bloquear el pago
+1. El **gateway** valida el token de Keycloak y pasa el pago a **transacciones**.
+2. **transacciones** pide la decisión al **scoring** con un tiempo límite de 200 ms. Si no
+   llega a tiempo, aprueba por respaldo
    ([ADR 0001](docs/adr/0001-decision-en-linea-con-respaldo.md)).
-3. scoring revisa las listas de bloqueo y suma los puntos de las reglas R01–R07 con el
-   perfil del cliente en Valkey. Con 40 puntos o más la decisión es REVISAR; con 70 o
-   más, RECHAZAR.
-4. **perfiles** (Kafka Streams) actualiza los perfiles después, por eventos
+3. **scoring** revisa las listas de bloqueo y aplica las reglas con el perfil del cliente
+   guardado en Valkey.
+4. **perfiles** (Kafka Streams) actualiza los perfiles después, a partir de los eventos
    ([ADR 0002](docs/adr/0002-valkey-para-perfiles.md)).
 5. **casos** abre un caso por cada decisión sospechosa y lo envía en vivo a la bandeja.
-   Cerrar un caso como fraude confirmado bloquea la tarjeta y el dispositivo.
 
-Cada servicio tiene su propio esquema en PostgreSQL
-([ADR 0004](docs/adr/0004-esquema-por-servicio.md)).
+Decisiones de diseño destacadas:
 
-Los eventos usan outbox transaccional, consumidores idempotentes y tópicos de mensajes
-fallidos (DLT) ([ADR 0010](docs/adr/0010-outbox-y-mensajes-venenosos.md)).
+- **La decisión es síncrona y el resto es asíncrono.** El pago espera solo al scoring;
+  los perfiles y los casos se actualizan por eventos.
+- **Una base de datos por servicio.** Cada servicio tiene su propio esquema en PostgreSQL
+  y ninguno lee el de otro ([ADR 0004](docs/adr/0004-esquema-por-servicio.md)).
+- **Entrega confiable de eventos.** Hay un outbox transaccional, consumidores que toleran
+  mensajes duplicados y tópicos de mensajes fallidos (DLT)
+  ([ADR 0010](docs/adr/0010-outbox-y-mensajes-venenosos.md)).
+- **Auditoría.** Las evaluaciones y el historial de cada caso solo admiten inserciones.
+- **Roles.** Hay analistas, supervisores, administradores y auditores. El auditor ve el
+  nombre del cliente enmascarado
+  ([ADR 0016](docs/adr/0016-nombre-del-cliente-enmascarado.md)).
 
-## Capturas
-
-Tomadas con el generador en vivo (20 % de fraude) sobre 30 días de historia. Los
-clientes, tarjetas y comercios son ficticios.
-
-**Dashboard.** La última hora: transacciones, respaldos, detección, precisión, latencia
-y casos abiertos, más las transacciones por minuto según decisión.
-
-![Dashboard con transacciones por minuto y decisiones](docs/img/dashboard.png)
-
-**Bandeja de casos.** Los casos nuevos llegan por WebSocket y se marcan como «En vivo».
-Se filtran por estado, prioridad y analista.
-
-![Bandeja de casos con dos casos recibidos en vivo](docs/img/casos.png)
-
-**Detalle de un caso.** Qué reglas se dispararon y con cuántos puntos, el perfil del
-cliente en los últimos 30 días y las acciones del analista.
-
-![Detalle de un caso con las reglas R01 y R05 disparadas](docs/img/detalle-caso.png)
-
-Más abajo, las últimas 20 transacciones del cliente en un mapa y en una tabla. La
-transacción sospechosa aparece resaltada.
-
-![Mapa y tabla con las últimas transacciones del cliente](docs/img/detalle-mapa.png)
-
-**Reglas.** Los puntos y los parámetros de R01–R07 se editan desde la interfaz. Cada
-cambio crea una versión nueva, y cada evaluación guarda qué versión usó.
-
-![Página de reglas con el editor de R01 abierto](docs/img/reglas.png)
-
-**Métricas.** Detección, precisión y falsos positivos contra `verdad.jsonl`, desglosados
-por escenario. También la latencia y los respaldos.
-
-![Página de métricas con detección por escenario](docs/img/metricas.png)
+Las 17 decisiones de arquitectura están en [docs/adr/](docs/adr/). La especificación
+completa está en [docs/especificacion.md](docs/especificacion.md) y el plan de
+implementación en [docs/plan-implementacion.md](docs/plan-implementacion.md).
 
 ## Stack
 
-Java 21, Spring Boot 3.5, Spring Cloud Gateway, Apache Kafka 4 (KRaft) y Kafka Streams,
-PostgreSQL 16, Valkey 8, Keycloak 26, Python 3.12, React 19 con TypeScript, Vite,
-Tailwind, shadcn/ui, TanStack Query/Table, ECharts y Leaflet. Las pruebas usan
-Testcontainers, Vitest, pytest y k6.
+| Capa | Tecnologías |
+|---|---|
+| Backend | Java 21, Spring Boot 3.5, Spring Cloud Gateway, Flyway |
+| Mensajería y datos | Apache Kafka 4 (KRaft), Kafka Streams, PostgreSQL 16, Valkey 8 |
+| Seguridad | Keycloak 26 (OAuth 2 / OpenID Connect) |
+| Frontend | React 19, TypeScript, Vite, Tailwind, shadcn/ui, TanStack Query y Table, ECharts, Leaflet |
+| Generador | Python 3.12 |
+| Observabilidad | Prometheus, Grafana, Micrometer |
+| Pruebas | JUnit, Testcontainers, Vitest, pytest, k6, GitHub Actions |
 
-## Requisitos
+## Pruébalo en tu máquina
 
-- Java 21 (Temurin). Maven no hace falta: usa `./mvnw` (o `mvnw.cmd` en Windows).
-- Docker (infraestructura y Testcontainers).
-- Python 3.12 (generador).
-- Node.js 24 (frontend).
+### Requisitos
 
-## Arranque paso a paso
+- Java 21 (Temurin). No hace falta instalar Maven: el repositorio trae `./mvnw` (o
+  `mvnw.cmd` en Windows).
+- Docker, para la infraestructura y para Testcontainers.
+- Python 3.12, para el generador.
+- Node.js 24, para el frontend.
 
 Los comandos se ejecutan desde la raíz del repositorio. En Windows con PowerShell o
 cmd, cambia `python3.12` por `py -3.12` y `.venv/bin/python` por `.venv\Scripts\python`.
 
-**1. Secretos e infraestructura**
+### 1. Secretos e infraestructura
 
 ```bash
 cp .env.example .env
@@ -122,13 +214,14 @@ Esto levanta lo siguiente; los tópicos de Kafka se crean solos:
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3000 |
 
-Los valores de `.env.example` son solo para uso local.
+Los valores de `.env.example` son solo para uso local. Los puertos se publican solo en
+`127.0.0.1`.
 
 Antes de seguir, espera a que `docker compose -f infra/docker-compose.yml ps` muestre todo
 como `healthy`. Keycloak tarda alrededor de un minuto en importar el realm; si el
 generador pide un token antes, falla con "Server disconnected".
 
-**2. Servicios**
+### 2. Servicios
 
 ```bash
 ./mvnw -DskipTests package
@@ -150,7 +243,7 @@ se puede usar `./mvnw -pl services/<servicio> spring-boot:run`.
 | perfiles (actuator) | 8083 | — |
 | casos | 8084 | http://localhost:8084/swagger-ui/index.html |
 
-**3. Datos: clientes y 30 días de historia**
+### 3. Datos: clientes y 30 días de historia
 
 ```bash
 cd generador
@@ -164,7 +257,7 @@ python3.12 -m venv .venv
 unos 21 000 pagos normales con fechas pasadas para llenar los perfiles; tarda entre 10 y 20
 minutos.
 
-**4. Frontend**
+### 4. Frontend
 
 ```bash
 cd frontend
@@ -175,7 +268,17 @@ npm run dev
 Abre http://localhost:5173 e inicia sesión con un usuario de prueba. Vite reenvía `/api`
 y `/ws` al gateway.
 
-**5. Tráfico en vivo con fraude y métricas de detección**
+| Usuario | Rol | Puede |
+|---|---|---|
+| `admin` | ADMIN | todo, incluido subir la verdad |
+| `supervisor` | SUPERVISOR | reglas, listas de bloqueo, asignar y cerrar casos |
+| `analista1`, `analista2` | ANALISTA | tomar, investigar y cerrar sus casos; notas |
+| `auditor` | AUDITOR | solo lectura; ve el nombre del cliente enmascarado |
+
+Las contraseñas están en `.env` (por defecto, las de `.env.example`). El cliente OAuth
+`generador` (rol SISTEMA) es el único que crea transacciones.
+
+### 5. Tráfico en vivo con fraude y métricas de detección
 
 ```bash
 cd generador
@@ -196,12 +299,12 @@ cd generador
 Para empezar de cero: `docker compose -f infra/docker-compose.yml down -v`, que borra los
 datos, y después repite los pasos 1 a 3.
 
-## Observabilidad
+### Observabilidad
 
 Prometheus y Grafana se levantan junto con el resto de la infraestructura (paso 1):
 
 - **Grafana** (http://localhost:3000): usuario `admin`, contraseña `GF_SECURITY_ADMIN_PASSWORD`
-  del `.env`. Abre el tablero *Detección de fraude: operación*, que muestra:
+  del `.env`. El tablero *Detección de fraude: operación* muestra:
   - transacciones por segundo según la decisión;
   - respaldos;
   - latencia p50/p95/p99 del scoring;
@@ -213,61 +316,7 @@ Prometheus y Grafana se levantan junto con el resto de la infraestructura (paso 
   respaldos sobre el 5 %) se ven en http://localhost:9090/alerts; en local no hay
   Alertmanager.
 
-## Usuarios de prueba
-
-Las contraseñas están en `.env` (por defecto, las de `.env.example`).
-
-| Usuario | Rol | Puede |
-|---|---|---|
-| `admin` | ADMIN | todo, incluido subir la verdad |
-| `supervisor` | SUPERVISOR | reglas, listas de bloqueo, asignar y cerrar casos |
-| `analista1`, `analista2` | ANALISTA | tomar, investigar y cerrar sus casos; notas |
-| `auditor` | AUDITOR | solo lectura; ve el nombre del cliente enmascarado |
-
-El cliente OAuth `generador` (rol SISTEMA) es el único que crea transacciones.
-
-## Escenarios de fraude
-
-| Escenario | Simulación | Reglas |
-|---|---|---|
-| `TARJETA_CLONADA` | Compra POS a 400 km o más, minutos después de una compra local | R03 |
-| `CARD_TESTING` | 6 a 12 compras de 1 a 10 PEN en menos de 10 minutos, con huella nueva | R02 + R05 |
-| `TOMA_DE_CUENTA` | Dispositivo nuevo y monto mayor a 5 veces el promedio | R05 + R01 |
-| `COMPRA_ATIPICA` | Monto muy alto en un rubro de riesgo nunca usado | R01 + R06 |
-| `USO_NOCTURNO` | Compras en rubros de riesgo de madrugada desde un dispositivo nuevo | R07 + R05 + R06 |
-
-## Métricas obtenidas
-
-Corrida en vivo de 12 minutos con 20 % de fraude: 360 transacciones, 60 fraudes, de día,
-en una laptop con Windows y todo local.
-
-| Métrica | Valor |
-|---|---|
-| Detección (fraudes marcados) | 60,0 % |
-| Precisión | 97,3 % |
-| Falsos positivos | 0,3 % (1 de 300 legítimas) |
-| Respaldos | 0 de 360 |
-| Latencia del scoring p50 / p95 / p99 | 3 / 4 / 8 ms |
-
-| Escenario | Detección |
-|---|---|
-| `TOMA_DE_CUENTA` | 100 % (10 de 10) |
-| `COMPRA_ATIPICA` | 100 % (5 de 5) |
-| `TARJETA_CLONADA` | 100 % (4 de 4) |
-| `CARD_TESTING` | 41,5 % (17 de 41) |
-
-Después de `historia --dias 30` (20 295 pagos normales) quedan 5 falsos positivos (0,02 %),
-todos de R01 por la dispersión natural de los montos.
-
-En `CARD_TESTING`, las primeras cinco compras de cada ráfaga se aprueban por diseño:
-R02 necesita cinco compras previas. `USO_NOCTURNO` no aparece porque la corrida fue de
-día.
-
-**Prueba de carga** (k6, 20 tps durante 2 minutos por el gateway):
-
-- 2401 solicitudes y 0 errores.
-- p95 del timer del scoring: 14 ms (objetivo < 50 ms).
-- p95 de punta a punta: 182 ms.
+### Prueba de carga
 
 ```bash
 mkdir -p pruebas-carga/datos
@@ -306,3 +355,10 @@ infra/                   docker-compose, realm de Keycloak, script de tópicos
 pruebas-carga/           k6
 docs/                    especificación, plan y ADR
 ```
+
+## Aviso
+
+Este proyecto es una demostración técnica, no un sistema listo para producción. Los
+secretos de `.env.example` son públicos y solo sirven para el entorno local, y los datos
+son inventados. Las reglas y sus puntos son un punto de partida razonable, no un modelo
+calibrado con datos reales.
