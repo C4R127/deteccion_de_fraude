@@ -486,8 +486,10 @@ AUDITOR (§10).
 - Crear: `.github/workflows/ci.yml` (`./mvnw verify`, `pytest`, `npm ci && npm test &&
   npm run build`)
 
-- [ ] Verificar que el workflow pasa en un push.
-- [ ] Commit `ci: pipeline de build y pruebas`.
+- [ ] Verificar que el workflow pasa en un push. (Pendiente: el repositorio no tiene remoto.
+      Verificado en local sobre un clon limpio: `npm ci && npm test && npm run build` y
+      `pytest` pasan; `./mvnw verify` pasa con el `.env` de ejemplo.)
+- [x] Commit `ci: pipeline de build y pruebas`.
 
 ### Tarea 6.4: Documentación final
 
