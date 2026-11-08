@@ -6,6 +6,7 @@ import com.fraude.common.eventos.CasoCerradoEvento;
 import com.fraude.common.eventos.Resolucion;
 import com.fraude.common.eventos.Topicos;
 import com.fraude.common.json.JsonFraude;
+import com.fraude.common.kafka.EventoInvalidoException;
 import com.fraude.scoring.bloqueo.ListaBloqueoService;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Consume {@code casos.eventos} (§8.2): un caso cerrado como FRAUDE_CONFIRMADO bloquea la
  * tarjeta y el dispositivo con origen CASO. Idempotente por {@code casoId} en la misma
  * transacción que el bloqueo; los mensajes ilegibles o incompletos van a la DLT
- * (reglas de Kafka de CLAUDE.md, configuradas en {@link ConsumidoresConfig}).
+ * (reglas de Kafka de CLAUDE.md, configuradas en {@link com.fraude.common.kafka.ConsumidoresConfig}).
  */
 @Component
 public class CierreCasoConsumidor {

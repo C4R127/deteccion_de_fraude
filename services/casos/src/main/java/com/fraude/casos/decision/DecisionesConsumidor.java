@@ -6,6 +6,7 @@ import com.fraude.common.eventos.Decision;
 import com.fraude.common.eventos.DecisionSospechosaEvento;
 import com.fraude.common.eventos.Topicos;
 import com.fraude.common.json.JsonFraude;
+import com.fraude.common.kafka.EventoInvalidoException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

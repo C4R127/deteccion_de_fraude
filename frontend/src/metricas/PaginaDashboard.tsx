@@ -65,7 +65,7 @@ function opcionAnalistas(m: MetricasCasos): EChartsCoreOption {
   };
 }
 
-function Error({ servicio, mensaje }: { servicio: string; mensaje: string }) {
+function AvisoError({ servicio, mensaje }: { servicio: string; mensaje: string }) {
   return <p className="text-sm text-destructive">No se pudieron cargar las métricas de {servicio}: {mensaje}</p>;
 }
 
@@ -96,14 +96,14 @@ export function PaginaDashboard() {
         <Indicador nombre="Casos abiertos" valor={numero(c?.abiertos)}
           detalle={c ? `${c.abiertosPorPrioridad.ALTA} ALTA · ${c.abiertosPorPrioridad.MEDIA} MEDIA` : undefined} />
       </div>
-      {scoring.isError && <Error servicio="scoring" mensaje={scoring.error.message} />}
-      {casos.isError && <Error servicio="casos" mensaje={casos.error.message} />}
+      {scoring.isError && <AvisoError servicio="scoring" mensaje={scoring.error.message} />}
+      {casos.isError && <AvisoError servicio="casos" mensaje={casos.error.message} />}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <Card className="gap-2 py-5 xl:col-span-2">
           <CardHeader className="px-5"><CardTitle className="text-base">Transacciones por minuto según decisión</CardTitle></CardHeader>
           <CardContent className="px-5">
-            {transacciones.isError && <Error servicio="transacciones" mensaje={transacciones.error.message} />}
+            {transacciones.isError && <AvisoError servicio="transacciones" mensaje={transacciones.error.message} />}
             {volumen && <Grafico titulo="Transacciones por minuto" opcion={volumen} />}
           </CardContent>
         </Card>

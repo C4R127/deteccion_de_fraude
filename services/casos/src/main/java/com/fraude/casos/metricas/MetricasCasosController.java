@@ -1,6 +1,6 @@
 package com.fraude.casos.metricas;
 
-import com.fraude.common.errores.SolicitudInvalidaException;
+import com.fraude.common.metricas.Ventana;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
@@ -43,11 +43,9 @@ public class MetricasCasosController {
     public MetricasCasos obtener(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant hasta) {
-        Instant fin = hasta != null ? hasta : Instant.now();
-        Instant inicio = desde != null ? desde : fin.minus(VENTANA_POR_DEFECTO);
-        if (!inicio.isBefore(fin)) {
-            throw new SolicitudInvalidaException("desde debe ser anterior a hasta");
-        }
+        Ventana ventana = Ventana.resolver(desde, hasta, VENTANA_POR_DEFECTO);
+        Instant inicio = ventana.desde();
+        Instant fin = ventana.hasta();
 
         Map<String, Long> porEstado = conteo("SELECT estado, count(*) FROM caso WHERE estado <> 'CERRADO' GROUP BY 1",
                 "NUEVO", "ASIGNADO", "EN_INVESTIGACION");

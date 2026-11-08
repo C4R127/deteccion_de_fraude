@@ -1,4 +1,4 @@
-package com.fraude.casos.decision;
+package com.fraude.common.kafka;
 
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
@@ -15,8 +15,11 @@ import org.springframework.util.backoff.ExponentialBackOff;
  * se reintentan con espera creciente; los eventos inválidos y los que agotan los reintentos
  * van a {@code <tópico>.dlt} con la excepción en cabeceras. La partición nunca se bloquea.
  * Los offsets se confirman después del efecto (sin auto-commit, ack por registro).
+ *
+ * <p>Común a los servicios con consumidores {@code @KafkaListener} (scoring y casos); cada uno
+ * lo activa con {@code @Import(ConsumidoresConfig.class)}.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class ConsumidoresConfig {
 
     private static final Logger log = LoggerFactory.getLogger(ConsumidoresConfig.class);

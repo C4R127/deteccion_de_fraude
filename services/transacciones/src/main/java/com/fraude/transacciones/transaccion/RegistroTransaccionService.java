@@ -19,6 +19,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -39,12 +41,21 @@ public class RegistroTransaccionService {
     private final TransactionTemplate tx;
     private final OutboxStore outbox;
     private final ObjectMapper json = JsonFraude.objectMapper();
-    private final MeterRegistry metricas;
+    /** {@code transacciones.decisiones} por (decisión, respaldo), creados una vez al arrancar. */
+    private final Map<String, Counter> decisiones = new HashMap<>();
 
     public RegistroTransaccionService(TarjetaRepository tarjetas, ComercioRepository comercios,
             TransaccionStore store, ScoringClient scoring, TransactionTemplate tx, OutboxStore outbox,
             MeterRegistry metricas) {
-        this.metricas = metricas;
+        for (Decision decision : Decision.values()) {
+            for (boolean respaldo : new boolean[] {false, true}) {
+                decisiones.put(clave(decision, respaldo), Counter.builder("transacciones.decisiones")
+                        .description("Transacciones registradas por decisión; respaldo=true si el scoring no respondió a tiempo")
+                        .tag("decision", decision.name())
+                        .tag("respaldo", String.valueOf(respaldo))
+                        .register(metricas));
+            }
+        }
         this.tarjetas = tarjetas;
         this.comercios = comercios;
         this.store = store;
@@ -92,12 +103,11 @@ public class RegistroTransaccionService {
 
     /** {@code transacciones.decisiones}: throughput, decisiones y respaldos para Prometheus (Tarea 6.5). */
     private void contar(TransaccionResponse r) {
-        Counter.builder("transacciones.decisiones")
-                .description("Transacciones registradas por decisión; respaldo=true si el scoring no respondió a tiempo")
-                .tag("decision", r.decision().name())
-                .tag("respaldo", String.valueOf(r.respaldo()))
-                .register(metricas)
-                .increment();
+        decisiones.get(clave(r.decision(), r.respaldo())).increment();
+    }
+
+    private static String clave(Decision decision, boolean respaldo) {
+        return decision.name() + "|" + respaldo;
     }
 
     private String aJson(TransaccionCreadaEvento evento) {

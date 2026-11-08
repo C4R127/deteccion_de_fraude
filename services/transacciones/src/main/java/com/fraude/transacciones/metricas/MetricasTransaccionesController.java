@@ -1,6 +1,6 @@
 package com.fraude.transacciones.metricas;
 
-import com.fraude.common.errores.SolicitudInvalidaException;
+import com.fraude.common.metricas.Ventana;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -40,11 +40,9 @@ public class MetricasTransaccionesController {
     public MetricasTransacciones obtener(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant hasta) {
-        Instant fin = hasta != null ? hasta : Instant.now();
-        Instant inicio = desde != null ? desde : fin.minus(VENTANA_POR_DEFECTO);
-        if (!inicio.isBefore(fin)) {
-            throw new SolicitudInvalidaException("desde debe ser anterior a hasta");
-        }
+        Ventana ventana = Ventana.resolver(desde, hasta, VENTANA_POR_DEFECTO);
+        Instant inicio = ventana.desde();
+        Instant fin = ventana.hasta();
         Timestamp d = Timestamp.from(inicio);
         Timestamp h = Timestamp.from(fin);
 

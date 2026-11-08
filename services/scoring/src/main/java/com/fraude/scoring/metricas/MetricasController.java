@@ -1,5 +1,6 @@
 package com.fraude.scoring.metricas;
 
+import com.fraude.common.metricas.Ventana;
 import com.fraude.common.errores.SolicitudInvalidaException;
 import com.fraude.scoring.metricas.MetricasService.Metricas;
 import java.time.Duration;
@@ -42,11 +43,9 @@ public class MetricasController {
     @GetMapping
     public Metricas obtener(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant hasta) {
-        Instant fin = hasta != null ? hasta : Instant.now();
-        Instant inicio = desde != null ? desde : fin.minus(VENTANA_POR_DEFECTO);
-        if (!inicio.isBefore(fin)) {
-            throw new SolicitudInvalidaException("desde debe ser anterior a hasta");
-        }
+        Ventana ventana = Ventana.resolver(desde, hasta, VENTANA_POR_DEFECTO);
+        Instant inicio = ventana.desde();
+        Instant fin = ventana.hasta();
         return metricas.calcular(inicio, fin);
     }
 
