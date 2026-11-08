@@ -13,11 +13,6 @@ URL_TOKEN = "http://localhost:8180/realms/fraude/protocol/openid-connect/token"
 URL_VERDAD = "http://localhost:8080/api/v1/metricas/verdad"
 
 
-@pytest.fixture(autouse=True)
-def secreto(monkeypatch):
-    monkeypatch.setenv("GENERADOR_CLIENT_SECRET", "secreto-de-prueba")
-
-
 def _token():
     return httpx.Response(200, json={"access_token": "t", "expires_in": 300, "token_type": "Bearer"})
 

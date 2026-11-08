@@ -25,11 +25,6 @@ CAMPOS_SECCION_11 = {
 }
 
 
-@pytest.fixture(autouse=True)
-def secreto(monkeypatch):
-    monkeypatch.setenv("GENERADOR_CLIENT_SECRET", "secreto-de-prueba")
-
-
 def _token(valor="tok-1", expira=300):
     return httpx.Response(200, json={"access_token": valor, "expires_in": expira, "token_type": "Bearer"})
 
