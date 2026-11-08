@@ -20,8 +20,12 @@ mensajes que no se pueden procesar y `exactly_once_v2` en Kafka Streams.
 - `PublicadorOutbox` (tarea programada, cada 200 ms): toma pendientes con
   `FOR UPDATE SKIP LOCKED` en orden de creación, envía y **espera el ack**; solo entonces
   marca `enviado_en`. Si falla: `intentos + 1`, espera creciente (1 s × 2^intentos, máximo
-  5 min), `ultimo_error`, log de error y métrica. Si un evento de una clave falla, los
-  siguientes de la misma clave en ese lote no se envían, para no alterar el orden por tarjeta.
+  5 min), `ultimo_error`, log de error y métrica. Al primer fallo el ciclo termina: cada
+  envío puede esperar el ack hasta 30 s, y con el broker caído no deben encadenarse esperas
+  dentro de la transacción que bloquea las filas. Los eventos posteriores de una clave con un
+  evento reprogramado no se toman hasta que ese evento se envíe, ni en ese ciclo ni en los
+  siguientes, para no alterar el orden por tarjeta (corregido tras la revisión de código: antes
+  solo se respetaba dentro del lote).
 - Productor: `acks=all`, `enable.idempotence=true`, reintentos por defecto dentro de
   `delivery.timeout.ms`.
 - Métricas: `outbox.pendientes` (gauge) y `outbox.fallos` (contador).

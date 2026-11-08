@@ -1,5 +1,6 @@
 package com.fraude.scoring.regla;
 
+import com.fraude.common.perfil.Velocidad;
 import com.fraude.common.errores.RecursoNoEncontradoException;
 import com.fraude.common.errores.SolicitudInvalidaException;
 import java.time.Clock;
@@ -80,6 +81,19 @@ public class CatalogoReglas {
         if (edicion.parametros() != null && !edicion.parametros().keySet().equals(actual.getParametros().keySet())) {
             throw new SolicitudInvalidaException("Los parámetros de " + actual.getCodigo() + " deben ser exactamente "
                     + actual.getParametros().keySet());
+        }
+        if (edicion.parametros() != null && edicion.parametros().containsKey("ventanaMinutos")) {
+            validarVentanaVelocidad(edicion.parametros().get("ventanaMinutos"));
+        }
+    }
+
+    /** R02 cuenta en Valkey lo que perfiles guarda de velocidad: la ventana no puede ser mayor. */
+    private static void validarVentanaVelocidad(Object valor) {
+        long maximo = Velocidad.RETENCION.toMinutes();
+        if (!(valor instanceof Number n) || n.doubleValue() != Math.floor(n.doubleValue())
+                || n.longValue() < 1 || n.longValue() > maximo) {
+            throw new SolicitudInvalidaException("ventanaMinutos debe ser un entero entre 1 y " + maximo
+                    + ": perfiles guarda " + maximo + " minutos de velocidad por tarjeta");
         }
     }
 }

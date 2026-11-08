@@ -217,6 +217,9 @@ gateway, credenciales del cliente OAuth `generador`. Misma semilla = misma corri
 Sin perfil (cliente nuevo o `n30d < 10`), las reglas que dependen del perfil no se
 cumplen; R02, R03, R05 y R06 sí se evalúan.
 
+La ventana de R02 (`ventanaMinutos`) admite de 1 a 60 minutos: perfiles guarda una hora de
+velocidad por tarjeta en Valkey.
+
 Cada regla disparada se registra como
 `{"codigo": "R01", "puntos": 40, "detalle": "monto 2450.00 PEN, promedio 180.00 PEN"}`.
 

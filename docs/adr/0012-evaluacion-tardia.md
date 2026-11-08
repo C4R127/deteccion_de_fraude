@@ -16,6 +16,10 @@ aprobado y las métricas contarían un rechazo que nunca se aplicó.
   (el mismo valor que usa transacciones, inicial 200 ms), la evaluación se guarda con
   `tardia = true` y **no** se publica `DecisionSospechosaEvento`.
 - Las métricas (§9) tratan las evaluaciones tardías como decisiones de respaldo.
+- La latencia se mide desde que llega la solicitud al servicio hasta justo antes de guardar la
+  evaluación, dentro de la transacción. Incluye la consulta de idempotencia, el cálculo de
+  reglas y la espera por una conexión del pool. Antes solo medía el cálculo de reglas; se
+  corrigió tras la revisión de código.
 
 ## Consecuencias
 

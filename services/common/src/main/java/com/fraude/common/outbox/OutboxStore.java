@@ -26,12 +26,21 @@ public class OutboxStore {
                 UUID.randomUUID(), topico, clave, payload);
     }
 
-    /** Pendientes vencidos en orden de creación, bloqueados para este publicador. */
+    /**
+     * Pendientes vencidos en orden de creación, bloqueados para este publicador. Se omiten los
+     * que tienen detrás, en la misma clave, un evento anterior reprogramado que aún no vence:
+     * enviarlos antes rompería el orden por tarjeta.
+     */
     public List<Pendiente> tomarPendientes(int limite) {
         return jdbc.query("""
-                SELECT id, topico, clave, payload, intentos FROM outbox
-                WHERE enviado_en IS NULL AND proximo_intento <= clock_timestamp()
-                ORDER BY creado_en, id
+                SELECT o.id, o.topico, o.clave, o.payload, o.intentos FROM outbox o
+                WHERE o.enviado_en IS NULL AND o.proximo_intento <= clock_timestamp()
+                  AND NOT EXISTS (
+                      SELECT 1 FROM outbox a
+                      WHERE a.clave = o.clave AND a.enviado_en IS NULL
+                        AND (a.creado_en, a.id) < (o.creado_en, o.id)
+                        AND a.proximo_intento > clock_timestamp())
+                ORDER BY o.creado_en, o.id
                 LIMIT ?
                 FOR UPDATE SKIP LOCKED
                 """,

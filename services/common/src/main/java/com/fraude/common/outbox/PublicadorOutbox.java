@@ -6,8 +6,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,8 +13,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Envía los eventos pendientes del outbox (ADR 0010). Un evento se marca enviado solo después
- * del ack; si falla, se reprograma con espera creciente y no se adelantan los eventos
- * siguientes de la misma clave, para conservar el orden por tarjeta.
+ * del ack; si falla, se reprograma con espera creciente y el ciclo termina: cada envío puede
+ * esperar el ack hasta {@code outbox.publicador.espera-ack}, y con el broker caído no deben
+ * encadenarse dentro de una transacción que bloquea filas. Los eventos posteriores de la
+ * misma clave esperan al reprogramado ({@link OutboxStore#tomarPendientes}), así se conserva
+ * el orden por tarjeta entre ciclos.
  */
 @Service
 public class PublicadorOutbox {
@@ -50,22 +51,19 @@ public class PublicadorOutbox {
     public int publicarPendientes() {
         Integer enviados = tx.execute(estado -> {
             int ok = 0;
-            Set<String> clavesBloqueadas = new HashSet<>();
             for (OutboxStore.Pendiente p : store.tomarPendientes(LOTE)) {
-                if (clavesBloqueadas.contains(p.clave())) {
-                    continue;
-                }
                 try {
                     enviador.enviar(p.topico(), p.clave(), p.payload());
                     store.marcarEnviado(p.id());
                     ok++;
                 } catch (Exception e) {
-                    clavesBloqueadas.add(p.clave());
                     Instant proximo = reloj.instant().plus(espera(p.intentos() + 1));
                     store.marcarFallo(p.id(), e.toString(), proximo);
                     fallos.increment();
                     log.error("No se pudo publicar el evento {} del outbox en {} (intento {}); reintento {}",
                             p.id(), p.topico(), p.intentos() + 1, proximo, e);
+                    // El resto del lote sigue en el próximo ciclo (200 ms): no se encadenan esperas.
+                    break;
                 }
             }
             return ok;

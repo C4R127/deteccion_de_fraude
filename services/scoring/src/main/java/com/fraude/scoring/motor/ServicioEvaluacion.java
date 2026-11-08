@@ -49,23 +49,27 @@ public class ServicioEvaluacion {
     }
 
     public EvaluacionResultado evaluar(EvaluacionSolicitud s) {
+        // Desde el inicio: la consulta de idempotencia y la espera de conexiones también cuentan
+        // para el tiempo límite que aplica transacciones (ADR 0012).
+        long inicio = System.nanoTime();
         Optional<EvaluacionResultado> guardada = store.buscar(s.transaccionId());
         if (guardada.isPresent()) {
             return guardada.get();
         }
-        long inicio = System.nanoTime();
         Calculo calculo = motor.calcular(s);
-        long nanos = System.nanoTime() - inicio;
-        latencia.record(nanos, TimeUnit.NANOSECONDS);
-        boolean tardia = nanos > limiteNanos;
 
         Boolean nueva = tx.execute(estado -> {
+            // Medido ya dentro de la transacción, con la conexión tomada: incluye la espera por el pool.
+            // Quedan fuera solo el INSERT y el commit, de pocos milisegundos.
+            long nanos = System.nanoTime() - inicio;
+            boolean tardia = nanos > limiteNanos;
             boolean insertada = store.insertar(s, calculo, TimeUnit.NANOSECONDS.toMillis(nanos), tardia, reloj.instant());
             if (insertada && calculo.decision() != Decision.APROBAR && !tardia) {
                 outbox.guardar(Topicos.DECISIONES_SOSPECHOSAS, s.tarjetaId().toString(), evento(s, calculo));
             }
             return insertada;
         });
+        latencia.record(System.nanoTime() - inicio, TimeUnit.NANOSECONDS);
         if (!Boolean.TRUE.equals(nueva)) {
             // Otra solicitud con el mismo transaccionId ganó la carrera: se devuelve la guardada.
             return store.buscar(s.transaccionId()).orElseThrow();

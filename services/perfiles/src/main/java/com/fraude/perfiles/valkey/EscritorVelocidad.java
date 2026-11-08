@@ -1,5 +1,6 @@
 package com.fraude.perfiles.valkey;
 
+import com.fraude.common.perfil.Velocidad;
 import com.fraude.common.eventos.TransaccionCreadaEvento;
 import java.util.List;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -12,7 +13,7 @@ import org.springframework.data.redis.core.script.RedisScript;
  */
 public class EscritorVelocidad implements EscritorEvento {
 
-    static final long UNA_HORA_MS = 3_600_000L;
+    static final long UNA_HORA_MS = Velocidad.RETENCION.toMillis();
     /** Sin eventos nuevos, la clave expira sola. */
     static final long EXPIRA_S = 2 * 3600;
 

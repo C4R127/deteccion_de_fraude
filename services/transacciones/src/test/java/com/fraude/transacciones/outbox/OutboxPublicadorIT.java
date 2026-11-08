@@ -154,11 +154,42 @@ class OutboxPublicadorIT {
         guardar("tarjeta-2", "{\"n\":3}");
 
         publicador.publicarPendientes();
+        publicador.publicarPendientes();
 
         assertThat(enviador.enviados).containsExactly("tarjeta-2|{\"n\":3}");
         assertThat(jdbc.queryForObject(
                 "SELECT intentos FROM outbox WHERE payload::text LIKE '%2}'", Integer.class))
                 .as("el segundo de la clave fallida no se intentó").isZero();
+    }
+
+    @Test
+    void el_siguiente_ciclo_no_adelanta_eventos_detras_de_uno_reprogramado() {
+        enviador.clavesQueFallan.add("tarjeta-1");
+        guardar("tarjeta-1", "{\"n\":1}");
+        publicador.publicarPendientes();
+        // El broker vuelve, pero el primero espera su reintento; llega otro de la misma tarjeta.
+        enviador.clavesQueFallan.clear();
+        guardar("tarjeta-1", "{\"n\":2}");
+
+        assertThat(publicador.publicarPendientes()).isZero();
+        assertThat(enviador.enviados).as("el segundo no sale antes que el primero").isEmpty();
+
+        jdbc.update("UPDATE outbox SET proximo_intento = now() - interval '1 second'");
+        assertThat(publicador.publicarPendientes()).isEqualTo(2);
+        assertThat(enviador.enviados).containsExactly("tarjeta-1|{\"n\":1}", "tarjeta-1|{\"n\":2}");
+    }
+
+    @Test
+    void con_el_broker_caido_un_ciclo_intenta_un_solo_envio() {
+        enviador.clavesQueFallan.addAll(Set.of("tarjeta-1", "tarjeta-2", "tarjeta-3"));
+        guardar("tarjeta-1", "{\"n\":1}");
+        guardar("tarjeta-2", "{\"n\":2}");
+        guardar("tarjeta-3", "{\"n\":3}");
+
+        publicador.publicarPendientes();
+
+        // Cada envío fallido puede esperar hasta 30 s el ack: no se encadenan dentro de la transacción.
+        assertThat(jdbc.queryForObject("SELECT sum(intentos) FROM outbox", Integer.class)).isEqualTo(1);
     }
 
     @Test

@@ -114,6 +114,22 @@ class ReglasApiIT {
     }
 
     @Test
+    void la_ventana_de_r02_no_supera_lo_que_perfiles_guarda_de_velocidad() throws Exception {
+        var mayor = llamar(HttpMethod.PUT, "/api/v1/reglas/R02", TokensDePrueba.ADMIN,
+                "{\"parametros\": {\"minimoPrevias\": 5, \"ventanaMinutos\": 61}}");
+
+        assertThat(mayor.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(json(mayor).get("detail").asText()).contains("60");
+        assertThat(llamar(HttpMethod.PUT, "/api/v1/reglas/R02", TokensDePrueba.ADMIN,
+                "{\"parametros\": {\"minimoPrevias\": 5, \"ventanaMinutos\": 0}}").getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(catalogo.vigente("R02").version()).isEqualTo(1);
+        assertThat(llamar(HttpMethod.PUT, "/api/v1/reglas/R02", TokensDePrueba.ADMIN,
+                "{\"parametros\": {\"minimoPrevias\": 5, \"ventanaMinutos\": 60}}").getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void regla_inexistente_devuelve_404() {
         assertThat(llamar(HttpMethod.PUT, "/api/v1/reglas/R99", TokensDePrueba.ADMIN, "{\"puntos\": 1}")
                 .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
